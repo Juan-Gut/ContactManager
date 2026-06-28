@@ -39,6 +39,12 @@ ScaffoldingReadMe.txt
 # dotenv environment variables file
 .env
 
+# JetBrains Rider files
+.idea/
+
+# Copilot agent files
+.github/agents/
+
 # Others
 ~$*
 *~
