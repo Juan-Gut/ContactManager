@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\ContactManager.Data\ContactManager.Data.csproj" />
+        <ProjectReference Include="..\ContactManager.Models\ContactManager.Models.csproj" />
+    </ItemGroup>
+
+</Project>
