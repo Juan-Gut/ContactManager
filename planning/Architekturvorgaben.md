@@ -13,8 +13,8 @@ ContactManager/
 ├── ContactManager.Models/             # ---> DATENSTRUKTUR (ohne Logik)
 │   ├── ContactManager.Models.csproj
 │   ├── Person.cs                      # Basisklasse
-│   ├── Kunde.cs                       # Erbt von Person
-│   └── Mitarbeiter.cs                 # Erbt von Person
+│   ├── Customer.cs                    # Erbt von Person
+│   └── Employee.cs                    # Erbt von Person
 │
 ├── ContactManager.Data/               # ---> DATENZUGRIFF (Nur File I/O!)
 │   ├── ContactManager.Data.csproj
@@ -22,8 +22,8 @@ ContactManager/
 │
 ├── ContactManager.Logic/              # ---> GESCHÄFTSLOGIK 
 │   ├── ContactManager.Logic.csproj
-│   ├── PersonenManager.cs             # CRUD-Operationen & Suchlogik
-│   ├── MitarbeiterNummerGenerator.cs  # Automatische Nummernvergabe
+│   ├── PersonManager.cs             # CRUD-Operationen & Suchlogik (wird evtl. erweitert mit Customer/Employee)
+│   ├── EmployeeNrGenerator.cs  # Automatische Nummernvergabe
 │   └── ValidationService.cs           # Prüft Eingaben (Fehler abfangen)
 │
 └── ContactManager.UI/ (Windows Forms) # ---> BENUTZEROBERFLÄCHE 
