@@ -1,152 +1,85 @@
-# Requirements List – Semesterprojekt "Contact Manager"
+# Requirements - Contact Manager
 
----
+## Features
 
-## 1. Funktionale Anforderungen (Must-Have)
+### Allgemein
 
-| ID  | Anforderung                                               | Priorität |
-|-----|-----------------------------------------------------------|-----------|
-| 01  | Kunde erfassen                                            | Hoch      |
-| 02  | Kunde bearbeiten (Mutieren z.B. in eine andere Abteilung) | Hoch      |
-| 03  | Kunde löschen                                             | Hoch      |
-| 04  | Kunde aktivieren/deaktivieren                             | Hoch      |
-| 05  | Mitarbeiter erfassen                                      | Hoch      |
-| 06  | Mitarbeiter bearbeiten (Mutieren)                         | Hoch      |
-| 07  | Mitarbeiter löschen                                       | Hoch      |
-| 08  | Mitarbeiter aktivieren/deaktivieren                       | Hoch      |
-| 09  | Mitarbeiternummer automatisch vergeben                    | Hoch      |
-| 10  | Kundenkontakte als Notizen erfassen                       | Hoch      |
-| 11  | Historie aller Kundenkontakte anzeigen                    | Hoch      |
-| 12  | Suche nach Nachname                                       | Hoch      |
-| 13  | Suche nach Vorname                                        | Hoch      |
-| 14  | Suche nach Geburtsdatum                                   | Hoch      |
-| 15  | Suche nach Typ (Kunde/Mitarbeiter)                        | Hoch      |
-| 16  | Daten automatisch auf Festplatte speichern                | Hoch      |
-| 17  | Daten beim Start automatisch laden                        | Hoch      |
+| Information | Notizen / Ideen                           |
+|-------------|-------------------------------------------|
+| Verwaltung und Pflege von Mitarbeiter- und Kundeninformationen (nur Schweizer Kunden) |                                           |
+| CRUD Möglichkeiten |                                           |
+| Kontaktaufnahme mit Kunden dokumentieren | Eintrag in einem Journal (protokolliert)? |
 
----
+### Informationen zu verwalten
 
-## 2. Datenanforderungen
+Die folgende Matrix zeigt, welche Informationen den einzelnen Entitätstypen zugeordnet sind.
+Kunde und Mitarbeiter erben von Person. Lernender erbt von Mitarbeiter und Person.
 
-### Kunde
+| Information | Person | Kunde | Mitarbeiter | Lernender |
+|-------------|:------:|:-----:|:-----------:|:---------:|
+| Anrede | ✓ | ✓ | ✓ | ✓ |
+| Vorname | ✓ | ✓ | ✓ | ✓ |
+| Nachname | ✓ | ✓ | ✓ | ✓ |
+| Geburtsdatum | ✓ | ✓ | ✓ | ✓ |
+| Geschlecht | ✓ | ✓ | ✓ | ✓ |
+| Berufsbezeichnung | ✓ | ✓ | ✓ | ✓ |
+| Telefon Gesch. | ✓ | ✓ | ✓ | ✓ |
+| Mobil Tel | ✓ | ✓ | ✓ | ✓ |
+| Email | ✓ | ✓ | ✓ | ✓ |
+| Status (aktiv/passiv) | ✓ | ✓ | ✓ | ✓ |
+| Firma | | ✓ | | |
+| Mitarb.Nr | | | ✓ | ✓ |
+| Abteilung | | | ✓ | ✓ |
+| AHV Nr | | | ✓ | ✓ |
+| Wohnort | | | ✓ | ✓ |
+| Nationalität | | | ✓ | ✓ |
+| Addresse | | | ✓ | ✓ |
+| PLZ | | | ✓ | ✓ |
+| Eintritt- & Austrittsdatum | | | ✓ | ✓ |
+| Beschäftigungsgrad | | | ✓ | ✓ |
+| Kaderstufe (0-5) | | | ✓ | ✓ |
+| Lehrjahre | | | | ✓ |
+| Aktuelles Lehrjahr | | | | ✓ |
 
-| Feld                   | Pflicht |
-|------------------------|---------|
-| Anrede                 | Ja      |
-| Vorname                | Ja      |
-| Nachname               | Ja      |
-| Geburtsdatum           | Ja      |
-| Geschlecht             | Ja      |
-| Titel                  | Nein    |
-| Telefonnummer Geschäft | Nein    |
-| Mobiltelefonnummer     | Ja      |
-| E-Mail-Adresse         | Ja      |
-| Status (aktiv/passiv)  | Ja      |
+### Funktional
 
-### Mitarbeiter
+| Bereich | Anforderung |
+|---------|-------------|
+| Allgemein | Erfassung und Mutieren von Daten |
+| Allgemein | Personen Aktivieren & Deaktivieren |
+| Allgemein | Personen Löschen |
+| Allgemein | Suchmöglichkeiten über gespeicherte Infos |
+| Allgemein | Auto. Speichern/Laden des Datenstamms auf Festplatte (JSON / CSV Datei / ähnliches?) |
+| Kunden | Protokollieren Notizen in Kundenkontakt inkl. Historie |
+| Mitarbeiter | Automatische Vergabe von Mitarb.Nr |
 
-| Feld                   | Pflicht                                    |
-|------------------------|--------------------------------------------|
-| Mitarbeiternummer      | Automatisch                                |
-| Abteilung              | Ja                                         |
-| AHV-Nummer             | Ja                                         |
-| Wohnort                | Ja                                         |
-| Nationalität           | Ja                                         |
-| Adresse                | Ja                                         |
-| Postleitzahl           | Ja                                         |
-| Mobiltelefonnummer     | Ja                                         |
-| Eintrittsdatum         | Ja (Status kann dann berechnet werden)     |
-| Austrittsdatum         | Nein                                       |
-| Beschäftigungsgrad     | Ja                                         |
-| Rolle                  | Ja                                         |
-| Kaderstufe (0–5)       | Ja                                         |
-| Lehrjahre              | Ja, wenn Lernender                         |
-| Aktuelles Lehrjahr     | Ja, wenn Lernender                         |
-| Geschäftsadresse       | Ja                                         |
-| Telefonnummer Geschäft | Ja                                         |
-| E-Mail-Adresse         | Ja                                         |
+### Optional Funktional (Mind. 1 umgesetzt)
 
----
+| Anforderung | Info / Ideen |
+|-------------|--------------|
+| Mutationshistorie von Kontaktdaten | append in Log Datei & anzeigen lassen? |
+| Login | ein paar Accounts im JSON? |
+| Sinnvolles Dashboard-View | |
+| Import von Kontakten im CSV oder VCard-Format | Beispiel-Daten/Dateien beilegen |
 
-## 3. Kundenkontakt-Anforderungen
+### Nicht-Funktional
 
-| ID    | Anforderung                                |
-|-------|--------------------------------------------|
-| CR-01 | Kunde kann mehrere Kontakte besitzen       |
-| CR-02 | Kontakt enthält Datum/Zeit                 |
-| CR-03 | Kontakt enthält Notiztext                  |
-| CR-04 | Kontakte werden chronologisch gespeichert  |
-| CR-05 | Kontakt-Historie kann angezeigt werden     |
+- Umsetzung C#, .NET, WindowsForms
+- Durchdachte Applikationsarchitektur (Vererbungshierarchie der Daten ist Pflicht)
+- Gute Benutzbarkeit
+- Hohe Stabilität (Fehleingaben abfangen, Abstürze verhindern)
+- Ausreichende In-Line Dokumentation (Public Classes, Methods, Properties, etc.)
 
----
+### Abgabe
 
-## 4. Nichtfunktionale Anforderungen
+- Abgabefrist: 20.09.2026 @ 23:00!!
+- Auf GitHub laden. Teamleiter sorgt dafür, dass Dozent den Link erhält (Email in Modulübersicht)
+- Keine Commits nach Abgabezeitpunkt -> Ganze Projekt mit Note 1 bewertet
+- Projekt enthält eine TXT-Datei mit:
+  - Gruppenmitglieder, Vorname & Nachname
+  - Beschreibung was funktioniert und was nicht
+  - Zusatzinformationen wie Login-Accounts, Import-Dateien, etc.
 
-| ID  | Anforderung                              |
-|-----|------------------------------------------|
-| N01 | Umsetzung in C#                          |
-| N02 | Verwendung von .NET Windows Forms        |
-| N03 | Vererbungshierarchie muss vorhanden sein |
-| N04 | Benutzerfreundliche Oberfläche           |
-| N05 | Fehlerhafte Eingaben abfangen            |
-| N06 | Anwendung darf nicht abstürzen           |
-| N07 | Public Klassen dokumentieren             |
-| N08 | Public Methoden dokumentieren            |
-| N09 | Public Properties dokumentieren          |
+#### Freiwillig
 
----
-
-## 5. Optionale Anforderungen (Nice-to-Have)
-
-| ID    | Anforderung                        |
-|-------|------------------------------------|
-| OR-01 | Mutationshistorie von Kontaktdaten |
-| OR-02 | Login-System                       |
-| OR-03 | Dashboard-Ansicht                  |
-| OR-04 | CSV-Import                         |
-| OR-05 | VCard-Import                       |
-
----
-
-## 6. Empfohlene Klassenstruktur
-
-> Laut Aufgabenstellung ist eine Vererbungshierarchie Pflicht.
-
-```
-Person
-│
-├── Kunde
-│    └── List<Kundenkontakt>
-│
-└── Mitarbeiter
-```
-
-**Weitere Klassen:**
-
-- `Person`
-- `Kunde`
-- `Mitarbeiter`
-- `Kundenkontakt`
-- `DataManager`
-- `FileManager`
-- `MainForm`
-- `CustomerForm`
-- `EmployeeForm`
-- `SearchForm`
-
----
-
-## 7. Akzeptanzkriterien
-
-Das Projekt gilt als erfüllt, wenn:
-
-- [ ] Kunden erstellt, bearbeitet und gelöscht werden können
-- [ ] Mitarbeiter erstellt, bearbeitet und gelöscht werden können
-- [ ] Mitarbeiternummern automatisch erzeugt werden
-- [ ] Kundenkontakte protokolliert werden können
-- [ ] Kontakt-Historie sichtbar ist
-- [ ] Suchfunktion funktioniert
-- [ ] Daten nach Neustart erhalten bleiben
-- [ ] Fehlerhafte Eingaben behandelt werden
-- [ ] Vererbung eingesetzt wird
-- [ ] Windows Forms verwendet wird
+- Arbeitsjournal führen (muss nicht abgegeben werden)
