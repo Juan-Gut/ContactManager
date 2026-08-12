@@ -42,6 +42,9 @@ ScaffoldingReadMe.txt
 # JetBrains Rider files
 .idea/
 
+# Visual Studio files
+.vs/
+
 # Copilot agent files
 .github/agents/
 
