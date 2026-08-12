@@ -1,3 +1,5 @@
+using ContactManager.Models.Enums;
+
 namespace ContactManager.Models;
 
 /// <summary>
@@ -8,12 +10,15 @@ public abstract class Person
 	/// <summary>
 	/// Gets or sets the stable identifier of the person.
 	/// </summary>
-	public Guid Id { get; set; } = Guid.NewGuid();
+	/// <remarks>
+	///     Set on creation and should not change after that, thus init only.
+	/// </remarks>
+	public Guid Id { get; init; } = Guid.NewGuid();
 
 	/// <summary>
 	/// Gets or sets the person's salutation.
 	/// </summary>
-	public string Salutation { get; set; } = string.Empty;
+	public Title Title { get; set; } = Title.Unknown;
 
 	/// <summary>
 	/// Gets or sets the person's first name.
@@ -33,7 +38,7 @@ public abstract class Person
 	/// <summary>
 	/// Gets or sets the person's gender.
 	/// </summary>
-	public string Gender { get; set; } = string.Empty;
+	public Gender Gender { get; set; }
 
 	/// <summary>
 	/// Gets or sets the person's job title.
@@ -43,12 +48,12 @@ public abstract class Person
 	/// <summary>
 	/// Gets or sets the person's business phone number.
 	/// </summary>
-	public string BusinessPhoneNumber { get; set; } = string.Empty;
+	public string BusinessNumber { get; set; } = string.Empty;
 
 	/// <summary>
 	/// Gets or sets the person's mobile phone number.
 	/// </summary>
-	public string MobilePhoneNumber { get; set; } = string.Empty;
+	public string MobileNumber { get; set; } = string.Empty;
 
 	/// <summary>
 	/// Gets or sets the person's email address.

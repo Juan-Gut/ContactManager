@@ -6,9 +6,14 @@ namespace ContactManager.Models;
 public sealed class CustomerContactEntry
 {
 	/// <summary>
+	///     Gets or sets the unique identifier of the contact entry.
+	/// </summary>
+	public Guid Id { get; init; } = Guid.NewGuid();
+
+	/// <summary>
 	/// Gets or sets when the entry was created.
 	/// </summary>
-	public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
+	public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.Now;
 
 	/// <summary>
 	/// Gets or sets the contact note.

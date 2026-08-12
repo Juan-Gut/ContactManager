@@ -15,6 +15,9 @@ public sealed class ContactData
 	/// <summary>
 	/// Gets or sets the employee number assigned to the next new employee.
 	/// </summary>
+	/// <remarks>
+	///     This should only be incremented from the EmployeeNrGenerator on employee creation.
+	/// </remarks>
 	public int NextEmployeeNumber { get; set; } = 1000;
 
 	/// <summary>
