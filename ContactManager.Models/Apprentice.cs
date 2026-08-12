@@ -8,10 +8,10 @@ public sealed class Apprentice : Employee
 	/// <summary>
 	/// Gets or sets the total duration of the apprenticeship in years.
 	/// </summary>
-	public int ApprenticeshipYears { get; set; }
+	public ushort ApprenticeshipDuration { get; set; }
 
 	/// <summary>
 	/// Gets or sets the apprentice's current apprenticeship year.
 	/// </summary>
-	public int CurrentApprenticeshipYear { get; set; }
+	public ushort CurrentApprenticeshipYear { get; set; }
 }
