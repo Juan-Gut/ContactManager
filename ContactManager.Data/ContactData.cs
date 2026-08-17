@@ -10,13 +10,16 @@ public sealed class ContactData
 	/// <summary>
 	/// Gets or sets the version of the persisted data structure.
 	/// </summary>
-	public int SchemaVersion { get; set; } = 1;
+	/// <remarks>
+	/// Having a schema version allows for future changes to the data structure while maintaining backwards compatibility.
+	/// </remarks>
+	public int SchemaVersion { get; init; } = 1;
 
 	/// <summary>
 	/// Gets or sets the employee number assigned to the next new employee.
 	/// </summary>
 	/// <remarks>
-	///     This should only be incremented from the EmployeeNrGenerator on employee creation.
+	/// This should only be incremented from the EmployeeNrGenerator on employee creation.
 	/// </remarks>
 	public int NextEmployeeNumber { get; set; } = 1000;
 

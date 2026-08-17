@@ -6,9 +6,11 @@ namespace ContactManager.Data;
 public interface IContactRepository
 {
 	/// <summary>
-	/// Loads the persisted contact data, or returns empty data when no storage file exists.
+	/// Loads the persisted contact data.
 	/// </summary>
-	/// <returns>The loaded contact data.</returns>
+	/// <returns>
+	/// Returns the loaded contact data or a new instance of ContactData if there is an error when loading.
+	/// </returns>
 	public ContactData Load();
 
 	/// <summary>
