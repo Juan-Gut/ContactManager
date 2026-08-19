@@ -13,7 +13,7 @@ public class Employee : Person
 	/// <remarks>
 	///     A unique number assigned to each employee upon creation and should not change
 	/// </remarks>
-	public int EmployeeNumber { get; init; }
+	public int EmployeeNumber { get; set; }
 
 	/// <summary>
 	/// Gets or sets the employee's department.
