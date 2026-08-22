@@ -53,7 +53,7 @@ public class Employee : Person
 	/// <summary>
 	/// Gets or sets the date on which employment ended, if applicable.
 	/// </summary>
-	public DateOnly? EmploymentEndDate { get; set; }
+	public DateOnly EmploymentEndDate { get; set; } = DateOnly.MaxValue;
 
 	/// <summary>
 	/// Gets or sets the employment percentage from 0 to 100.

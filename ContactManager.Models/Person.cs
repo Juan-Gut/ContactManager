@@ -21,7 +21,7 @@ public abstract class Person
 	/// <remarks>
 	/// The logic layer preserves this value when an existing person is updated.
 	/// </remarks>
-	public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+	public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 
 	/// <summary>
 	/// Gets or sets the person's salutation.

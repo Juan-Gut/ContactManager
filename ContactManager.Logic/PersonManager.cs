@@ -38,7 +38,7 @@ public sealed class PersonManager
 		_validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
 		_employeeNrGenerator = employeeNrGenerator ?? throw new ArgumentNullException(nameof(employeeNrGenerator));
 		_data = _repository.Load()
-			?? throw new InvalidOperationException("The contact repository returned no contact data.");
+				?? throw new InvalidOperationException("The contact repository returned no contact data.");
 
 		_data.Customers ??= [];
 		_data.Employees ??= [];
@@ -85,7 +85,6 @@ public sealed class PersonManager
 			throw new InvalidOperationException($"A person with identifier '{person.Id}' already exists.");
 		}
 
-		person.CreatedAt = DateTimeOffset.UtcNow;
 
 		switch (person)
 		{
@@ -126,7 +125,6 @@ public sealed class PersonManager
 			throw new ArgumentException("An existing person's contact type cannot be changed.", nameof(person));
 		}
 
-		person.CreatedAt = existingPerson.CreatedAt;
 		if (person is Employee updatedEmployee && existingPerson is Employee existingEmployee)
 		{
 			updatedEmployee.EmployeeNumber = existingEmployee.EmployeeNumber;
@@ -234,7 +232,6 @@ public sealed class PersonManager
 		customer.ContactHistory ??= [];
 		CustomerContactEntry entry = new()
 		{
-			CreatedAt = DateTimeOffset.UtcNow,
 			Note = note.Trim()
 		};
 		customer.ContactHistory.Add(entry);
@@ -290,7 +287,7 @@ public sealed class PersonManager
 			yield return employee.Address;
 			yield return employee.Plz;
 			yield return employee.EmploymentStartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-			yield return employee.EmploymentEndDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+			yield return employee.EmploymentEndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 			yield return employee.EmploymentPercentage.ToString(CultureInfo.InvariantCulture);
 			yield return employee.OfficeLocation.ToString();
 			yield return employee.ManagementLevel.ToString();
@@ -386,7 +383,7 @@ public sealed class PersonManager
 		collection[index] = person;
 
 		try
-		{			
+		{
 			_repository.Save(_data);
 			return true;
 		}

@@ -86,9 +86,17 @@ public sealed class ValidationService
 
 	private static void ValidateEmployee(Employee employee, ICollection<string> errors)
 	{
+		// We allow 16-year-old employees due to the apprenticeship program
+		DateOnly latestAllowedDateOfBirth = DateOnly.FromDateTime(DateTime.Today).AddYears(-16);
+
+		if (employee.DateOfBirth > latestAllowedDateOfBirth)
+		{
+			errors.Add("An employee must be at least 16 years old.");
+		}
+
 		if (employee.EmploymentPercentage is < 5 or > 100)
 		{
-			errors.Add("The employment percentage must be between 5 and 100.");
+			errors.Add("The employee must be employed between 5% and 100%.");
 		}
 
 		if (employee.EmploymentStartDate == default)
@@ -106,13 +114,13 @@ public sealed class ValidationService
 			return;
 		}
 
-		if (apprentice.ApprenticeshipDuration == 0)
+		if (apprentice.ApprenticeshipDuration is <= 0 or > 4)
 		{
-			errors.Add("The apprenticeship duration must be at least one year.");
+			errors.Add("The apprenticeship duration must be between 1 and 4 years.");
 		}
 
-		if (apprentice.CurrentApprenticeshipYear == 0
-			|| apprentice.CurrentApprenticeshipYear > apprentice.ApprenticeshipDuration)
+		if (apprentice.CurrentApprenticeshipYear <= 0 ||
+			apprentice.CurrentApprenticeshipYear > apprentice.ApprenticeshipDuration)
 		{
 			errors.Add("The current apprenticeship year must be within the apprenticeship duration.");
 		}
