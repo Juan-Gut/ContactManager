@@ -16,6 +16,14 @@ public abstract class Person
 	public Guid Id { get; init; } = Guid.NewGuid();
 
 	/// <summary>
+	/// Gets or sets when the person was created.
+	/// </summary>
+	/// <remarks>
+	/// The logic layer preserves this value when an existing person is updated.
+	/// </remarks>
+	public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
+
+	/// <summary>
 	/// Gets or sets the person's salutation.
 	/// </summary>
 	public Title Title { get; set; } = Title.Unknown;

@@ -13,7 +13,7 @@ public class Employee : Person
 	/// <remarks>
 	///     A unique number assigned to each employee upon creation and should not change
 	/// </remarks>
-	public int EmployeeNumber { get; init; }
+	public int EmployeeNumber { get; set; }
 
 	/// <summary>
 	/// Gets or sets the employee's department.
@@ -53,7 +53,7 @@ public class Employee : Person
 	/// <summary>
 	/// Gets or sets the date on which employment ended, if applicable.
 	/// </summary>
-	public DateOnly? EmploymentEndDate { get; set; }
+	public DateOnly EmploymentEndDate { get; set; } = DateOnly.MaxValue;
 
 	/// <summary>
 	/// Gets or sets the employment percentage from 0 to 100.
