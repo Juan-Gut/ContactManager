@@ -1,0 +1,60 @@
+﻿{
+  "customers": [
+    {
+      "title": 1,
+      "firstName": "Max",
+      "lastName": "Muster",
+      "dateOfBirth": "1999-12-28",
+      "gender": 1,
+      "jobTitle": "Dr.",
+      "businessNumber": "+41447140999",
+      "mobileNumber": "0784009999",
+      "emailAddress": "max.muster@zbw-online.ch",
+      "isActive": true,
+      "company": "Muster GmbH",
+      "contactHistory": []
+    },
+    {
+      "title": 3,
+      "firstName": "Anna",
+      "lastName": "Smith",
+      "dateOfBirth": "1990-08-22",
+      "gender": 2,
+      "jobTitle": "",
+      "businessNumber": "",
+      "mobileNumber": "0785009999",
+      "emailAddress": "anna.smith@zbw-online.ch",
+      "isActive": true,
+      "company": "Smith AG",
+      "contactHistory": []
+    },
+    {
+      "title": 1,
+      "firstName": "Peter",
+      "lastName": "Mueller",
+      "dateOfBirth": "2000-12-12",
+      "gender": 1,
+      "jobTitle": "",
+      "businessNumber": "+41716430999",
+      "mobileNumber": "0786009999",
+      "emailAddress": "peter.mueller@zbw-online.ch",
+      "isActive": false,
+      "company": "Mueller GmbH",
+      "contactHistory": []
+    },
+    {
+      "title": 2,
+      "firstName": "Barbara",
+      "lastName": "Keller",
+      "dateOfBirth": "1985-05-10",
+      "gender": 2,
+      "jobTitle": "Projektmanagerin",
+      "businessNumber": "+41719990044",
+      "mobileNumber": "0789999999",
+      "emailAddress": "barbara.keller@zbw-online.ch",
+      "isActive": true,
+      "company": "Keller GmbH",
+      "contactHistory": []
+    }
+  ]
+}
