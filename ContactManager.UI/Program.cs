@@ -1,3 +1,5 @@
+using ContactManager.Logic;
+
 namespace ContactManager.UI;
 
 internal static class Program
@@ -11,6 +13,14 @@ internal static class Program
 		// To customize application configuration such as set high DPI settings or default font,
 		// see https://aka.ms/applicationconfiguration.
 		ApplicationConfiguration.Initialize();
+
+		AuthenticationService authenticationService = new();
+		using LoginForm loginForm = new(authenticationService);
+		if (loginForm.ShowDialog() != DialogResult.OK)
+		{
+			return;
+		}
+
 		Application.Run(new Form1());
 	}
 }
