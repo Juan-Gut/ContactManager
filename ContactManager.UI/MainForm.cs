@@ -27,6 +27,31 @@ public partial class MainForm : Form
 		splitView.SplitterDistance = (splitView.ClientSize.Width - splitView.SplitterWidth) / 2;
 	}
 
+	/// <summary>Draws a tab label centered horizontally and vertically.</summary>
+	private void DrawMainTab(object? sender, DrawItemEventArgs e)
+	{
+		if (e.Index < 0 || e.Index >= MainTabs.TabPages.Count)
+		{
+			return;
+		}
+
+		TabPage tabPage = MainTabs.TabPages[e.Index];
+		bool isSelected = e.Index == MainTabs.SelectedIndex;
+		if (isSelected)
+		{
+			using SolidBrush selectedBackground = new(Color.FromArgb(250, 250, 250));
+			e.Graphics.FillRectangle(selectedBackground, e.Bounds);
+		}
+		else
+		{
+			using SolidBrush unselectedBackground = new(Color.FromArgb(225, 225, 225));
+			e.Graphics.FillRectangle(unselectedBackground, e.Bounds);
+		}
+
+		Color textColor = isSelected ? SystemColors.ControlText : SystemColors.GrayText;
+		TextRenderer.DrawText(e.Graphics, tabPage.Text, MainTabs.Font, e.Bounds, textColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+	}
+
 	/// <summary>Retains the search input as a UI-only preview until customer data is connected.</summary>
 	private void SearchCustomers(object? sender, EventArgs e) { }
 
@@ -75,8 +100,35 @@ public partial class MainForm : Form
 	/// <summary>Returns from customer notes to the detail view.</summary>
 	private void HideCustomerNotesView(object? sender, EventArgs e) => ShowCustomerNotes(false);
 
+	/// <summary>Displays the selected customer's edit history view.</summary>
+	private void ShowCustomerEditHistoryView(object? sender, EventArgs e) => ShowCustomerEditHistory(true);
+
+	/// <summary>Returns from customer edit history to the detail view.</summary>
+	private void HideCustomerEditHistoryView(object? sender, EventArgs e) => ShowCustomerEditHistory(false);
+
+	/// <summary>Shows or hides the customer's per-person edit history.</summary>
+	private void ShowCustomerEditHistory(bool visible)
+	{
+		CustomerDetailsScrollView.Visible = !visible;
+		CustomerNotesView.Visible = false;
+		CustomerEditHistoryView.Visible = visible;
+	}
+
+	/// <summary>Displays the selected employee's edit history view.</summary>
+	private void ShowEmployeeEditHistoryView(object? sender, EventArgs e) => ShowEmployeeEditHistory(true);
+
+	/// <summary>Returns from employee edit history to the detail view.</summary>
+	private void HideEmployeeEditHistoryView(object? sender, EventArgs e) => ShowEmployeeEditHistory(false);
+
+	/// <summary>Shows or hides the employee's per-person edit history.</summary>
+	private void ShowEmployeeEditHistory(bool visible)
+	{
+		EmployeeDetailsScrollView.Visible = !visible;
+		EmployeeEditHistoryView.Visible = visible;
+	}
+
 	/// <summary>Shows or hides customer notes without hiding the customer detail inputs.</summary>
-	private void ShowCustomerNotes(bool visible) { CustomerDetailsScrollView.Visible = true; CustomerNotesView.Visible = visible; CustomerNotesView.Dock = DockStyle.Bottom; CustomerNotesView.Height = visible ? 220 : 0; }
+	private void ShowCustomerNotes(bool visible) { CustomerDetailsScrollView.Visible = !visible; CustomerNotesView.Visible = visible; CustomerEditHistoryView.Visible = false; }
 
 	/// <summary>Enters the UI-only new-note state.</summary>
 	private void AddNewCustomerNote(object? sender, EventArgs e) { NewCustomerNoteArea.Visible = true; SaveCustomerNote.Visible = true; CancelCustomerNote.Visible = true; AddCustomerNote.Visible = false; }
@@ -110,14 +162,17 @@ public partial class MainForm : Form
 	/// <summary>Displays the non-authenticating login preview message.</summary>
 	private void PreviewLoginMessage(object? sender, EventArgs e) => ShowPreviewMessage("Authentication will be connected later.");
 
-	/// <summary>Restores the phase-one log placeholder without file access.</summary>
-	private void RefreshLogView(object? sender, EventArgs e) => LogsContent.Text = "No log file has been connected yet.";
+	/// <summary>Shows that CSV import will be connected in a later implementation phase.</summary>
+	private void ImportFromCsv(object? sender, EventArgs e) => ShowPreviewMessage("CSV import is not connected yet.");
+
+	/// <summary>Shows that CSV export will be connected in a later implementation phase.</summary>
+	private void ExportToCsv(object? sender, EventArgs e) => ShowPreviewMessage("CSV export is not connected yet.");
 
 	/// <summary>Applies read-only or editable state to customer inputs.</summary>
-	private void SetCustomerEditorMode(bool editable, bool hasSelection) { customerEditMode = editable; foreach (var input in new TextBox[] { CustomerFirstNameInput, CustomerLastNameInput, CustomerJobTitleInput, CustomerBusinessPhoneInput, CustomerMobilePhoneInput, CustomerEmailInput, CustomerCompanyInput }) input.ReadOnly = !editable; foreach (var input in new Control[] { CustomerTitleInput, CustomerDateOfBirthInput, CustomerGenderInput, CustomerActiveInput }) input.Enabled = editable; EditCustomer.Enabled = !editable && hasSelection; DeleteCustomer.Enabled = !editable && hasSelection; ViewCustomerNotes.Enabled = !editable && hasSelection; CreateCustomer.Enabled = !editable; SaveCustomer.Visible = editable; CancelCustomerEdit.Visible = editable; }
+	private void SetCustomerEditorMode(bool editable, bool hasSelection) { customerEditMode = editable; foreach (var input in new TextBox[] { CustomerFirstNameInput, CustomerLastNameInput, CustomerJobTitleInput, CustomerBusinessPhoneInput, CustomerMobilePhoneInput, CustomerEmailInput, CustomerCompanyInput }) input.ReadOnly = !editable; foreach (var input in new Control[] { CustomerTitleInput, CustomerDateOfBirthInput, CustomerGenderInput, CustomerActiveInput }) input.Enabled = editable; EditCustomer.Enabled = !editable && hasSelection; DeleteCustomer.Enabled = !editable && hasSelection; ViewCustomerNotes.Enabled = !editable && hasSelection; ViewCustomerHistory.Enabled = !editable && hasSelection; CreateCustomer.Enabled = !editable; SaveCustomer.Visible = editable; CancelCustomerEdit.Visible = editable; }
 
 	/// <summary>Applies read-only or editable state to employee inputs.</summary>
-	private void SetEmployeeEditorMode(bool editable, bool hasSelection) { employeeEditMode = editable; foreach (var input in new TextBox[] { EmployeeFirstNameInput, EmployeeLastNameInput, EmployeeDepartmentInput, EmployeeAhvNumberInput, EmployeeNationalityInput, EmployeeCityInput, EmployeeAddressInput, EmployeePostalCodeInput }) input.ReadOnly = !editable; foreach (var input in new Control[] { EmployeeStartDateInput, EmployeeEndDateInput, EmployeeEmploymentPercentageInput, EmployeeOfficeLocationInput, EmployeeManagementLevelInput, EmployeeTypeSelection, ApprenticeshipDurationInput, CurrentApprenticeshipYearInput }) input.Enabled = editable; EditEmployee.Enabled = !editable && hasSelection; DeleteEmployee.Enabled = !editable && hasSelection; CreateEmployee.Enabled = !editable; EmployeeNumberInput.ReadOnly = true; SaveEmployee.Visible = editable; CancelEmployeeEdit.Visible = editable; }
+	private void SetEmployeeEditorMode(bool editable, bool hasSelection) { employeeEditMode = editable; foreach (var input in new TextBox[] { EmployeeFirstNameInput, EmployeeLastNameInput, EmployeeDepartmentInput, EmployeeAhvNumberInput, EmployeeNationalityInput, EmployeeCityInput, EmployeeAddressInput, EmployeePostalCodeInput }) input.ReadOnly = !editable; foreach (var input in new Control[] { EmployeeStartDateInput, EmployeeEndDateInput, EmployeeEmploymentPercentageInput, EmployeeOfficeLocationInput, EmployeeManagementLevelInput, EmployeeTypeSelection, ApprenticeshipDurationInput, CurrentApprenticeshipYearInput }) input.Enabled = editable; EditEmployee.Enabled = !editable && hasSelection; DeleteEmployee.Enabled = !editable && hasSelection; ViewEmployeeHistory.Enabled = !editable && hasSelection; CreateEmployee.Enabled = !editable; EmployeeNumberInput.ReadOnly = true; SaveEmployee.Visible = editable; CancelEmployeeEdit.Visible = editable; }
 
 	/// <summary>Displays a safe UI-only phase-one message without relying on a status header.</summary>
 	private void ShowPreviewMessage(string message) => MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
