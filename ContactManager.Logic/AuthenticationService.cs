@@ -12,7 +12,7 @@ public sealed class AuthenticationService
 	private const int PasswordHashIterations = 100_000;
 	private const string DemoUserName = "admin";
 	private const string DemoPasswordSalt = "ContactManagerDemoLogin";
-	private const string DemoPasswordHash = "78BB531B6019FD1653872E78E248D477B26FD92D72BAB2B349DB887B009B8906";
+	private const string DemoPasswordHash = "24B87E87AE1016A75248E2F6C2EB58EC923EF4D82A6FA3EA9406DDC5BAB71789";
 
 	/// <summary>
 	/// Checks whether the supplied credentials belong to the demo user.
