@@ -74,6 +74,18 @@ public sealed class PersonManager
 	}
 
 	/// <summary>
+	/// Gets the next employee number that will be assigned to a new employee.
+	/// </summary>
+	/// <returns>The next available employee number.</returns>
+	/// <exception cref="InvalidOperationException">
+	/// Thrown when no further employee number can be assigned.
+	/// </exception>
+	public int GetNextEmployeeNumber()
+	{
+		return _employeeNrGenerator.GetNextAvailable(_data);
+	}
+
+	/// <summary>
 	/// Adds and persists a new customer, employee, or apprentice.
 	/// </summary>
 	/// <param name="person">The person to add.</param>

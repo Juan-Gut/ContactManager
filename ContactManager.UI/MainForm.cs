@@ -11,12 +11,18 @@ public partial class MainForm : Form
 {
 	/// <summary>Provides access to contact-management operations at runtime.</summary>
 	private readonly PersonManager? personManager;
+
 	/// <summary>Indicates whether the customer editor is currently in edit mode.</summary>
 	private bool customerEditMode;
+
 	/// <summary>Indicates whether a new customer is being created.</summary>
 	private bool creatingCustomer;
+
 	/// <summary>Indicates whether the employee editor is currently in edit mode.</summary>
 	private bool employeeEditMode;
+
+	/// <summary>Indicates whether a new employee is being created.</summary>
+	private bool creatingEmployee;
 
 	/// <summary>
 	/// Initializes a new instance of the form for the visual designer.
@@ -36,6 +42,8 @@ public partial class MainForm : Form
 		this.personManager = personManager ?? throw new ArgumentNullException(nameof(personManager));
 		PopulateEnumComboBox<Title>(CustomerTitleInput, Title.Unknown);
 		PopulateEnumComboBox<Gender>(CustomerGenderInput, Gender.Unknown);
+		PopulateEnumComboBox<Title>(EmployeeTitleInput, Title.Unknown);
+		PopulateEnumComboBox<Gender>(EmployeeGenderInput, Gender.Unknown);
 		PopulateEnumComboBox<OfficeLocation>(EmployeeOfficeLocationInput, OfficeLocation.Unknown);
 		PopulateEnumComboBox<ManagementLevel>(EmployeeManagementLevelInput);
 		SetCustomerEditorMode(false, false);
@@ -52,22 +60,31 @@ public partial class MainForm : Form
 
 		/// <summary>Gets the creation date.</summary>
 		public DateOnly CreatedAt { get; init; }
+
 		/// <summary>Gets the customer's title.</summary>
 		public Title Title { get; init; }
+
 		/// <summary>Gets the customer's first name.</summary>
 		public string FirstName { get; init; } = string.Empty;
+
 		/// <summary>Gets the customer's last name.</summary>
 		public string LastName { get; init; } = string.Empty;
+
 		/// <summary>Gets the customer's date of birth.</summary>
 		public DateOnly DateOfBirth { get; init; }
+
 		/// <summary>Gets the customer's gender.</summary>
 		public Gender Gender { get; init; }
+
 		/// <summary>Gets the customer's job title.</summary>
 		public string JobTitle { get; init; } = string.Empty;
+
 		/// <summary>Gets the customer's business phone number.</summary>
 		public string BusinessNumber { get; init; } = string.Empty;
+
 		/// <summary>Gets the customer's mobile phone number.</summary>
 		public string MobileNumber { get; init; } = string.Empty;
+
 		/// <summary>Gets the customer's email address.</summary>
 		public string EmailAddress { get; init; } = string.Empty;
 
@@ -98,22 +115,31 @@ public partial class MainForm : Form
 
 		/// <summary>Gets the creation date.</summary>
 		public DateOnly CreatedAt { get; init; }
+
 		/// <summary>Gets the employee's title.</summary>
 		public Title Title { get; init; }
+
 		/// <summary>Gets the employee's first name.</summary>
 		public string FirstName { get; init; } = string.Empty;
+
 		/// <summary>Gets the employee's last name.</summary>
 		public string LastName { get; init; } = string.Empty;
+
 		/// <summary>Gets the employee's date of birth.</summary>
 		public DateOnly DateOfBirth { get; init; }
+
 		/// <summary>Gets the employee's gender.</summary>
 		public Gender Gender { get; init; }
+
 		/// <summary>Gets the employee's job title.</summary>
 		public string JobTitle { get; init; } = string.Empty;
+
 		/// <summary>Gets the employee's business phone number.</summary>
 		public string BusinessNumber { get; init; } = string.Empty;
+
 		/// <summary>Gets the employee's mobile phone number.</summary>
 		public string MobileNumber { get; init; } = string.Empty;
+
 		/// <summary>Gets the employee's email address.</summary>
 		public string EmailAddress { get; init; } = string.Empty;
 
@@ -134,10 +160,13 @@ public partial class MainForm : Form
 
 		/// <summary>Gets the employee's office location.</summary>
 		public OfficeLocation OfficeLocation { get; init; }
+
 		/// <summary>Gets the employee's management level.</summary>
 		public ManagementLevel ManagementLevel { get; init; }
+
 		/// <summary>Gets the apprenticeship duration in years.</summary>
 		public ushort ApprenticeshipDuration { get; init; }
+
 		/// <summary>Gets the apprentice's current apprenticeship year.</summary>
 		public ushort CurrentApprenticeshipYear { get; init; }
 	}
@@ -275,6 +304,34 @@ public partial class MainForm : Form
 		}
 	}
 
+	/// <summary>
+	/// Reloads the employee projection and optionally selects an employee by stable identifier.
+	/// </summary>
+	/// <param name="selectedEmployeeId">The employee to select after reloading, if any.</param>
+	private void ReloadEmployees(Guid? selectedEmployeeId = null)
+	{
+		EmployeesGrid.DataSource = personManager!.GetAll()
+			.OfType<Employee>()
+			.Select(CreateEmployeeListRow)
+			.ToList();
+
+		if (selectedEmployeeId is not Guid id)
+		{
+			return;
+		}
+
+		for (int rowIndex = 0; rowIndex < EmployeesGrid.Rows.Count; rowIndex++)
+		{
+			if (EmployeesGrid.Rows[rowIndex].DataBoundItem is EmployeeListRow { Id: var rowId } && rowId == id)
+			{
+				EmployeesGrid.ClearSelection();
+				EmployeesGrid.Rows[rowIndex].Selected = true;
+				EmployeesGrid.CurrentCell = EmployeesGrid.Rows[rowIndex].Cells[0];
+				break;
+			}
+		}
+	}
+
 	/// <summary>Centers split views and the login preview after the form has its final initial size.</summary>
 	private void InitializeLayout(object? sender, EventArgs e)
 	{
@@ -328,15 +385,171 @@ public partial class MainForm : Form
 	/// <summary>Updates customer action availability when a row is selected.</summary>
 	private void SelectCustomer(object? sender, EventArgs e)
 	{
-		SetCustomerEditorMode(customerEditMode, CustomersGrid.CurrentRow is not null);
-		int noteCount = (CustomersGrid.CurrentRow?.DataBoundItem as CustomerListRow)?.ContactHistoryCount ?? 0;
+		CustomerListRow? selectedRow = CustomersGrid.SelectedRows.Count == 1
+			? CustomersGrid.SelectedRows[0].DataBoundItem as CustomerListRow
+			: null;
+		Customer? selectedCustomer = selectedRow is null
+			? null
+			: personManager?.GetById(selectedRow.Id) as Customer;
+
+		if (selectedCustomer is null)
+		{
+			ClearCustomerDetails();
+		}
+		else
+		{
+			PopulateCustomerDetails(selectedCustomer);
+		}
+
+		SetCustomerEditorMode(customerEditMode, selectedCustomer is not null);
+		int noteCount = selectedRow?.ContactHistoryCount ?? 0;
 		ViewCustomerNotes.Text = $"Contact notes ({noteCount})";
+	}
+
+	/// <summary>
+	/// Copies a customer's values into the customer detail controls.
+	/// </summary>
+	/// <param name="customer">The customer whose values should be displayed.</param>
+	private void PopulateCustomerDetails(Customer customer)
+	{
+		CustomerTitleInput.SelectedItem = customer.Title;
+		CustomerFirstNameInput.Text = customer.FirstName;
+		CustomerLastNameInput.Text = customer.LastName;
+		CustomerDateOfBirthInput.Value = customer.DateOfBirth.ToDateTime(TimeOnly.MinValue);
+		CustomerGenderInput.SelectedItem = customer.Gender;
+		CustomerJobTitleInput.Text = customer.JobTitle;
+		CustomerBusinessPhoneInput.Text = customer.BusinessNumber;
+		CustomerMobilePhoneInput.Text = customer.MobileNumber;
+		CustomerEmailInput.Text = customer.EmailAddress;
+		CustomerActiveInput.Checked = customer.IsActive;
+		CustomerCompanyInput.Text = customer.Company;
+	}
+
+	/// <summary>Clears the customer detail controls when no customer is selected.</summary>
+	private void ClearCustomerDetails()
+	{
+		CustomerTitleInput.SelectedIndex = -1;
+		CustomerFirstNameInput.Clear();
+		CustomerLastNameInput.Clear();
+		CustomerDateOfBirthInput.Value = CustomerDateOfBirthInput.MinDate;
+		CustomerGenderInput.SelectedIndex = -1;
+		CustomerJobTitleInput.Clear();
+		CustomerBusinessPhoneInput.Clear();
+		CustomerMobilePhoneInput.Clear();
+		CustomerEmailInput.Clear();
+		CustomerActiveInput.Checked = false;
+		CustomerCompanyInput.Clear();
 	}
 
 	/// <summary>Updates employee action availability when a row is selected.</summary>
 	private void SelectEmployee(object? sender, EventArgs e)
 	{
-		SetEmployeeEditorMode(employeeEditMode, EmployeesGrid.CurrentRow is not null);
+		EmployeeListRow? selectedRow = EmployeesGrid.SelectedRows.Count == 1
+			? EmployeesGrid.SelectedRows[0].DataBoundItem as EmployeeListRow
+			: null;
+		Employee? selectedEmployee = selectedRow is null
+			? null
+			: personManager?.GetById(selectedRow.Id) as Employee;
+
+		if (selectedEmployee is null)
+		{
+			ClearEmployeeDetails();
+		}
+		else
+		{
+			PopulateEmployeeDetails(selectedEmployee);
+		}
+
+		SetEmployeeEditorMode(employeeEditMode, selectedEmployee is not null);
+	}
+
+	/// <summary>
+	/// Copies an employee's values into the employee detail controls.
+	/// </summary>
+	/// <param name="employee">The employee whose values should be displayed.</param>
+	private void PopulateEmployeeDetails(Employee employee)
+	{
+		EmployeeNumberInput.Text = employee.EmployeeNumber.ToString();
+		EmployeeTitleInput.SelectedItem = employee.Title;
+		EmployeeFirstNameInput.Text = employee.FirstName;
+		EmployeeLastNameInput.Text = employee.LastName;
+		SetDatePickerValue(EmployeeDateOfBirthInput, employee.DateOfBirth);
+		EmployeeGenderInput.SelectedItem = employee.Gender;
+		EmployeeJobTitleInput.Text = employee.JobTitle;
+		EmployeeBusinessPhoneInput.Text = employee.BusinessNumber;
+		EmployeeMobilePhoneInput.Text = employee.MobileNumber;
+		EmployeeEmailInput.Text = employee.EmailAddress;
+		EmployeeDepartmentInput.Text = employee.Department;
+		EmployeeAhvNumberInput.Text = employee.AhvNumber;
+		EmployeeNationalityInput.Text = employee.Nationality;
+		EmployeeCityInput.Text = employee.City;
+		EmployeeAddressInput.Text = employee.Address;
+		EmployeePostalCodeInput.Text = employee.Plz;
+		SetDatePickerValue(EmployeeStartDateInput, employee.EmploymentStartDate);
+		SetDatePickerValue(EmployeeEndDateInput, employee.EmploymentEndDate);
+		SetNumericValue(EmployeeEmploymentPercentageInput, employee.EmploymentPercentage);
+		EmployeeOfficeLocationInput.SelectedItem = employee.OfficeLocation;
+		EmployeeManagementLevelInput.SelectedItem = employee.ManagementLevel;
+		EmployeeTypeApprenticeOption.Checked = employee is Apprentice;
+
+		if (employee is Apprentice apprentice)
+		{
+			SetNumericValue(ApprenticeshipDurationInput, apprentice.ApprenticeshipDuration);
+			SetNumericValue(CurrentApprenticeshipYearInput, apprentice.CurrentApprenticeshipYear);
+		}
+
+		SetApprenticeFieldsVisible(employee is Apprentice);
+	}
+
+	/// <summary>Clears the employee detail controls when no employee is selected.</summary>
+	private void ClearEmployeeDetails()
+	{
+		EmployeeNumberInput.Clear();
+		EmployeeTitleInput.SelectedIndex = -1;
+		EmployeeFirstNameInput.Clear();
+		EmployeeLastNameInput.Clear();
+		EmployeeDateOfBirthInput.Value = EmployeeDateOfBirthInput.MinDate;
+		EmployeeGenderInput.SelectedIndex = -1;
+		EmployeeJobTitleInput.Clear();
+		EmployeeBusinessPhoneInput.Clear();
+		EmployeeMobilePhoneInput.Clear();
+		EmployeeEmailInput.Clear();
+		EmployeeDepartmentInput.Clear();
+		EmployeeAhvNumberInput.Clear();
+		EmployeeNationalityInput.Clear();
+		EmployeeCityInput.Clear();
+		EmployeeAddressInput.Clear();
+		EmployeePostalCodeInput.Clear();
+		EmployeeStartDateInput.Value = EmployeeStartDateInput.MinDate;
+		EmployeeEndDateInput.Value = EmployeeEndDateInput.MinDate;
+		EmployeeEmploymentPercentageInput.Value = EmployeeEmploymentPercentageInput.Minimum;
+		EmployeeOfficeLocationInput.SelectedIndex = -1;
+		EmployeeManagementLevelInput.SelectedIndex = -1;
+		EmployeeTypeEmployeeOption.Checked = true;
+		ApprenticeshipDurationInput.Value = ApprenticeshipDurationInput.Minimum;
+		CurrentApprenticeshipYearInput.Value = CurrentApprenticeshipYearInput.Minimum;
+		SetApprenticeFieldsVisible(false);
+	}
+
+	/// <summary>Sets a date picker to a model date while respecting its supported range.</summary>
+	/// <param name="datePicker">The date picker to update.</param>
+	/// <param name="date">The model date to display.</param>
+	private static void SetDatePickerValue(DateTimePicker datePicker, DateOnly date)
+	{
+		DateTime value = date.ToDateTime(TimeOnly.MinValue);
+		datePicker.Value = value < datePicker.MinDate
+			? datePicker.MinDate
+			: value > datePicker.MaxDate
+				? datePicker.MaxDate
+				: value;
+	}
+
+	/// <summary>Sets a numeric control to a value constrained to its configured range.</summary>
+	/// <param name="numericInput">The numeric control to update.</param>
+	/// <param name="value">The value to display.</param>
+	private static void SetNumericValue(NumericUpDown numericInput, decimal value)
+	{
+		numericInput.Value = Math.Clamp(value, numericInput.Minimum, numericInput.Maximum);
 	}
 
 	/// <summary>Clears the customer editor and enters customer creation mode.</summary>
@@ -458,6 +671,40 @@ public partial class MainForm : Form
 	/// <summary>Enters employee creation mode without constructing a model.</summary>
 	private void CreateNewEmployee(object? sender, EventArgs e)
 	{
+		try
+		{
+			EmployeeNumberInput.Text = personManager?.GetNextEmployeeNumber().ToString() ?? string.Empty;
+		}
+		catch (InvalidOperationException exception)
+		{
+			ShowErrorMessage("A new employee cannot be created.\n\n" + exception.Message);
+			return;
+		}
+
+		EmployeeTitleInput.SelectedIndex = 0;
+		EmployeeFirstNameInput.Clear();
+		EmployeeLastNameInput.Clear();
+		EmployeeDateOfBirthInput.Value = new DateTime(2000, 1, 1);
+		EmployeeGenderInput.SelectedIndex = 0;
+		EmployeeJobTitleInput.Clear();
+		EmployeeBusinessPhoneInput.Clear();
+		EmployeeMobilePhoneInput.Clear();
+		EmployeeEmailInput.Clear();
+		EmployeeDepartmentInput.Clear();
+		EmployeeAhvNumberInput.Clear();
+		EmployeeNationalityInput.Clear();
+		EmployeeCityInput.Clear();
+		EmployeeAddressInput.Clear();
+		EmployeePostalCodeInput.Clear();
+		EmployeeStartDateInput.Value = DateTime.Today;
+		EmployeeEndDateInput.Value = new DateTime(2099, 12, 31);
+		EmployeeEmploymentPercentageInput.Value = 100;
+		EmployeeOfficeLocationInput.SelectedIndex = 0;
+		EmployeeManagementLevelInput.SelectedIndex = 0;
+		EmployeeTypeEmployeeOption.Checked = true;
+		ApprenticeshipDurationInput.Value = ApprenticeshipDurationInput.Minimum;
+		CurrentApprenticeshipYearInput.Value = CurrentApprenticeshipYearInput.Minimum;
+		creatingEmployee = true;
 		SetEmployeeEditorMode(true, false);
 	}
 
@@ -473,17 +720,82 @@ public partial class MainForm : Form
 		ShowPreviewMessage("Employee deletion is not connected yet.");
 	}
 
-	/// <summary>Returns the employee detail pane to list mode after the preview save action.</summary>
+	/// <summary>Saves a newly created employee or apprentice and returns to list mode.</summary>
 	private void SaveEmployeeDetails(object? sender, EventArgs e)
 	{
-		SetEmployeeEditorMode(false, EmployeesGrid.CurrentRow is not null);
-		ShowPreviewMessage("Employee persistence is not connected yet.");
+		if (!creatingEmployee)
+		{
+			ShowPreviewMessage("Editing employees will be connected in a later implementation phase.");
+			return;
+		}
+
+		try
+		{
+			Employee employee = CreateEmployeeFromInputs();
+			personManager!.Add(employee);
+			ReloadEmployees(employee.Id);
+			EmployeeNumberInput.Text = employee.EmployeeNumber.ToString();
+			creatingEmployee = false;
+			SetEmployeeEditorMode(false, true);
+		}
+		catch (ArgumentException exception)
+		{
+			ShowErrorMessage("The employee could not be saved. Please correct the following:\n\n" + exception.Message);
+		}
+		catch (Exception exception)
+		{
+			ShowErrorMessage("The employee could not be saved.\n\n" + exception.Message);
+		}
 	}
 
 	/// <summary>Cancels employee creation or editing without changing data.</summary>
 	private void CancelEmployeeEditMode(object? sender, EventArgs e)
 	{
+		creatingEmployee = false;
 		SetEmployeeEditorMode(false, EmployeesGrid.CurrentRow is not null);
+	}
+
+	/// <summary>Creates an employee or apprentice from the current employee form values.</summary>
+	/// <returns>The employee model represented by the form.</returns>
+	private Employee CreateEmployeeFromInputs()
+	{
+		Employee employee = EmployeeTypeApprenticeOption.Checked ? new Apprentice() : new Employee();
+		employee.Title = EmployeeTitleInput.SelectedItem is Title selectedTitle
+			? selectedTitle
+			: ParseEnum(EmployeeTitleInput.Text, Title.Unknown);
+		employee.FirstName = EmployeeFirstNameInput.Text.Trim();
+		employee.LastName = EmployeeLastNameInput.Text.Trim();
+		employee.DateOfBirth = DateOnly.FromDateTime(EmployeeDateOfBirthInput.Value);
+		employee.Gender = EmployeeGenderInput.SelectedItem is Gender selectedGender
+			? selectedGender
+			: ParseEnum(EmployeeGenderInput.Text, Gender.Unknown);
+		employee.JobTitle = EmployeeJobTitleInput.Text.Trim();
+		employee.BusinessNumber = EmployeeBusinessPhoneInput.Text.Trim();
+		employee.MobileNumber = EmployeeMobilePhoneInput.Text.Trim();
+		employee.EmailAddress = EmployeeEmailInput.Text.Trim();
+		employee.Department = EmployeeDepartmentInput.Text.Trim();
+		employee.AhvNumber = EmployeeAhvNumberInput.Text.Trim();
+		employee.Nationality = EmployeeNationalityInput.Text.Trim();
+		employee.City = EmployeeCityInput.Text.Trim();
+		employee.Address = EmployeeAddressInput.Text.Trim();
+		employee.Plz = EmployeePostalCodeInput.Text.Trim();
+		employee.EmploymentStartDate = DateOnly.FromDateTime(EmployeeStartDateInput.Value);
+		employee.EmploymentEndDate = DateOnly.FromDateTime(EmployeeEndDateInput.Value);
+		employee.EmploymentPercentage = (ushort)EmployeeEmploymentPercentageInput.Value;
+		employee.OfficeLocation = EmployeeOfficeLocationInput.SelectedItem is OfficeLocation selectedOfficeLocation
+			? selectedOfficeLocation
+			: ParseEnum(EmployeeOfficeLocationInput.Text, OfficeLocation.Unknown);
+		employee.ManagementLevel = EmployeeManagementLevelInput.SelectedItem is ManagementLevel selectedManagementLevel
+			? selectedManagementLevel
+			: ParseEnum(EmployeeManagementLevelInput.Text, ManagementLevel.None);
+
+		if (employee is Apprentice apprentice)
+		{
+			apprentice.ApprenticeshipDuration = (ushort)ApprenticeshipDurationInput.Value;
+			apprentice.CurrentApprenticeshipYear = (ushort)CurrentApprenticeshipYearInput.Value;
+		}
+
+		return employee;
 	}
 
 	/// <summary>Displays the in-place customer notes view.</summary>
