@@ -8,6 +8,7 @@ namespace ContactManager.Logic;
 /// </summary>
 public sealed class EmployeeNrGenerator
 {
+	/// <summary>Defines the first valid employee number.</summary>
 	private const int FirstEmployeeNumber = 1000;
 
 	/// <summary>

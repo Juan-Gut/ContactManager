@@ -21,7 +21,7 @@ public abstract class Person
 	/// <remarks>
 	/// The logic layer preserves this value when an existing person is updated.
 	/// </remarks>
-	public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
+	public DateOnly CreatedAt { get; init; } = DateOnly.FromDateTime(DateTime.UtcNow);
 
 	/// <summary>
 	/// Gets or sets the person's salutation.
@@ -67,9 +67,4 @@ public abstract class Person
 	/// Gets or sets the person's email address.
 	/// </summary>
 	public string EmailAddress { get; set; } = string.Empty;
-
-	/// <summary>
-	/// Gets or sets whether the person is active.
-	/// </summary>
-	public bool IsActive { get; set; } = true;
 }
