@@ -50,6 +50,7 @@ public partial class MainForm : Form
 		SetEmployeeEditorMode(false, false);
 		Load += LoadInitialData;
 		Shown += InitializeLayout;
+		MainTabs.SelectedIndexChanged += ResetEditModesOnTabSwitch;
 	}
 
 	/// <summary>Represents the identifying customer data shown in the customer list.</summary>
@@ -187,6 +188,7 @@ public partial class MainForm : Form
 				.ToList();
 			EmployeesGrid.DataSource = people
 				.OfType<Employee>()
+				.OrderBy(employee => employee.EmployeeNumber)
 				.Select(CreateEmployeeListRow)
 				.ToList();
 
@@ -312,6 +314,7 @@ public partial class MainForm : Form
 	{
 		EmployeesGrid.DataSource = personManager!.GetAll()
 			.OfType<Employee>()
+			.OrderBy(employee => employee.EmployeeNumber)
 			.Select(CreateEmployeeListRow)
 			.ToList();
 
@@ -338,6 +341,20 @@ public partial class MainForm : Form
 		CenterSplitView(CustomersSplitView);
 		CenterSplitView(EmployeesSplitView);
 		CenterLoginPreview(this, EventArgs.Empty);
+	}
+
+	/// <summary>Returns both contact editors to view mode when the active tab changes.</summary>
+	private void ResetEditModesOnTabSwitch(object? sender, EventArgs e)
+	{
+		if (customerEditMode)
+		{
+			CancelCustomerEditMode(sender, e);
+		}
+
+		if (employeeEditMode)
+		{
+			CancelEmployeeEditMode(sender, e);
+		}
 	}
 
 	/// <summary>Centers a vertical split handle after the split view has its final runtime size.</summary>
@@ -463,6 +480,26 @@ public partial class MainForm : Form
 		SetEmployeeEditorMode(employeeEditMode, selectedEmployee is not null);
 	}
 
+	/// <summary>Gets the full customer represented by the selected customer-grid row.</summary>
+	/// <returns>The selected customer, or <see langword="null"/> when no valid row is selected.</returns>
+	private Customer? GetSelectedCustomer()
+	{
+		return CustomersGrid.SelectedRows.Count == 1
+			&& CustomersGrid.SelectedRows[0].DataBoundItem is CustomerListRow selectedRow
+			? personManager?.GetById(selectedRow.Id) as Customer
+			: null;
+	}
+
+	/// <summary>Gets the full employee represented by the selected employee-grid row.</summary>
+	/// <returns>The selected employee, or <see langword="null"/> when no valid row is selected.</returns>
+	private Employee? GetSelectedEmployee()
+	{
+		return EmployeesGrid.SelectedRows.Count == 1
+			&& EmployeesGrid.SelectedRows[0].DataBoundItem is EmployeeListRow selectedRow
+			? personManager?.GetById(selectedRow.Id) as Employee
+			: null;
+	}
+
 	/// <summary>
 	/// Copies an employee's values into the employee detail controls.
 	/// </summary>
@@ -575,30 +612,70 @@ public partial class MainForm : Form
 	/// <summary>Enters customer edit mode for the selected preview row.</summary>
 	private void EditCustomerDetails(object? sender, EventArgs e)
 	{
+		if (GetSelectedCustomer() is null)
+		{
+			return;
+		}
+
 		SetCustomerEditorMode(true, true);
 	}
 
-	/// <summary>Explains that customer deletion is not connected in Part 1.</summary>
+	/// <summary>Confirms and deletes the selected customer.</summary>
 	private void DeleteSelectedCustomer(object? sender, EventArgs e)
 	{
-		ShowPreviewMessage("Customer deletion is not connected yet.");
-	}
-
-	/// <summary>Saves a newly created customer and returns to customer list mode.</summary>
-	/// <param name="sender">The save-customer button.</param>
-	/// <param name="e">The event data.</param>
-	private void SaveCustomerDetails(object? sender, EventArgs e)
-	{
-		if (!creatingCustomer)
+		if (CustomersGrid.SelectedRows.Count != 1
+			|| CustomersGrid.SelectedRows[0].DataBoundItem is not CustomerListRow selectedRow
+			|| personManager?.GetById(selectedRow.Id) is not Customer customer)
 		{
-			ShowPreviewMessage("Editing customers will be connected in a later implementation phase.");
+			return;
+		}
+
+		string customerName = $"{customer.FirstName} {customer.LastName}".Trim();
+		DialogResult confirmation = MessageBox.Show(
+			this,
+			$"Are you sure you want to delete {customerName}?",
+			"Delete customer",
+			MessageBoxButtons.YesNo,
+			MessageBoxIcon.Warning,
+			MessageBoxDefaultButton.Button2);
+		if (confirmation != DialogResult.Yes)
+		{
 			return;
 		}
 
 		try
 		{
+			if (!personManager!.Delete(customer.Id))
+			{
+				ShowErrorMessage("The customer could not be found.");
+				return;
+			}
+
+			ReloadCustomers();
+		}
+		catch (Exception exception)
+		{
+			ShowErrorMessage("The customer could not be deleted.\n\n" + exception.Message);
+		}
+	}
+
+	/// <summary>Saves a new or edited customer and returns to customer list mode.</summary>
+	/// <param name="sender">The save-customer button.</param>
+	/// <param name="e">The event data.</param>
+	private void SaveCustomerDetails(object? sender, EventArgs e)
+	{
+		try
+		{
+			Customer? existingCustomer = creatingCustomer ? null : GetSelectedCustomer();
+			if (!creatingCustomer && existingCustomer is null)
+			{
+				return;
+			}
+
 			Customer customer = new()
 			{
+				Id = existingCustomer?.Id ?? Guid.NewGuid(),
+				CreatedAt = existingCustomer?.CreatedAt ?? DateOnly.FromDateTime(DateTime.UtcNow),
 				Title = CustomerTitleInput.SelectedItem is Title selectedTitle
 					? selectedTitle
 					: ParseEnum(CustomerTitleInput.Text, Title.Unknown),
@@ -613,10 +690,20 @@ public partial class MainForm : Form
 				MobileNumber = CustomerMobilePhoneInput.Text.Trim(),
 				EmailAddress = CustomerEmailInput.Text.Trim(),
 				IsActive = CustomerActiveInput.Checked,
-				Company = CustomerCompanyInput.Text.Trim()
+				Company = CustomerCompanyInput.Text.Trim(),
+				ContactHistory = existingCustomer?.ContactHistory ?? []
 			};
 
-			personManager!.Add(customer);
+			if (creatingCustomer)
+			{
+				personManager!.Add(customer);
+			}
+			else if (!personManager!.Update(customer))
+			{
+				ShowErrorMessage("The customer could not be found.");
+				return;
+			}
+
 			ReloadCustomers(customer.Id);
 			creatingCustomer = false;
 			SetCustomerEditorMode(false, true);
@@ -635,7 +722,17 @@ public partial class MainForm : Form
 	private void CancelCustomerEditMode(object? sender, EventArgs e)
 	{
 		creatingCustomer = false;
-		SetCustomerEditorMode(false, CustomersGrid.CurrentRow is not null);
+		Customer? selectedCustomer = GetSelectedCustomer();
+		if (selectedCustomer is null)
+		{
+			ClearCustomerDetails();
+		}
+		else
+		{
+			PopulateCustomerDetails(selectedCustomer);
+		}
+
+		SetCustomerEditorMode(false, selectedCustomer is not null);
 	}
 
 	/// <summary>Converts a displayed enum value to an enum member with a safe fallback.</summary>
@@ -711,28 +808,75 @@ public partial class MainForm : Form
 	/// <summary>Enters employee edit mode for the selected preview row.</summary>
 	private void EditEmployeeDetails(object? sender, EventArgs e)
 	{
+		if (GetSelectedEmployee() is null)
+		{
+			return;
+		}
+
 		SetEmployeeEditorMode(true, true);
 	}
 
-	/// <summary>Explains that employee deletion is not connected in Part 1.</summary>
+	/// <summary>Confirms and deletes the selected employee.</summary>
 	private void DeleteSelectedEmployee(object? sender, EventArgs e)
 	{
-		ShowPreviewMessage("Employee deletion is not connected yet.");
-	}
-
-	/// <summary>Saves a newly created employee or apprentice and returns to list mode.</summary>
-	private void SaveEmployeeDetails(object? sender, EventArgs e)
-	{
-		if (!creatingEmployee)
+		if (EmployeesGrid.SelectedRows.Count != 1
+			|| EmployeesGrid.SelectedRows[0].DataBoundItem is not EmployeeListRow selectedRow
+			|| personManager?.GetById(selectedRow.Id) is not Employee employee)
 		{
-			ShowPreviewMessage("Editing employees will be connected in a later implementation phase.");
+			return;
+		}
+
+		string employeeName = $"{employee.FirstName} {employee.LastName}".Trim();
+		DialogResult confirmation = MessageBox.Show(
+			this,
+			$"Are you sure you want to delete {employeeName}?",
+			"Delete employee",
+			MessageBoxButtons.YesNo,
+			MessageBoxIcon.Warning,
+			MessageBoxDefaultButton.Button2);
+		if (confirmation != DialogResult.Yes)
+		{
 			return;
 		}
 
 		try
 		{
-			Employee employee = CreateEmployeeFromInputs();
-			personManager!.Add(employee);
+			if (!personManager!.Delete(employee.Id))
+			{
+				ShowErrorMessage("The employee could not be found.");
+				return;
+			}
+
+			ReloadEmployees();
+		}
+		catch (Exception exception)
+		{
+			ShowErrorMessage("The employee could not be deleted.\n\n" + exception.Message);
+		}
+	}
+
+	/// <summary>Saves a newly created employee or apprentice and returns to list mode.</summary>
+	private void SaveEmployeeDetails(object? sender, EventArgs e)
+	{
+		try
+		{
+			Employee? existingEmployee = creatingEmployee ? null : GetSelectedEmployee();
+			if (!creatingEmployee && existingEmployee is null)
+			{
+				return;
+			}
+
+			Employee employee = CreateEmployeeFromInputs(existingEmployee);
+			if (creatingEmployee)
+			{
+				personManager!.Add(employee);
+			}
+			else if (!personManager!.Update(employee))
+			{
+				ShowErrorMessage("The employee could not be found.");
+				return;
+			}
+
 			ReloadEmployees(employee.Id);
 			EmployeeNumberInput.Text = employee.EmployeeNumber.ToString();
 			creatingEmployee = false;
@@ -752,14 +896,31 @@ public partial class MainForm : Form
 	private void CancelEmployeeEditMode(object? sender, EventArgs e)
 	{
 		creatingEmployee = false;
-		SetEmployeeEditorMode(false, EmployeesGrid.CurrentRow is not null);
+		Employee? selectedEmployee = GetSelectedEmployee();
+		if (selectedEmployee is null)
+		{
+			ClearEmployeeDetails();
+		}
+		else
+		{
+			PopulateEmployeeDetails(selectedEmployee);
+		}
+
+		SetEmployeeEditorMode(false, selectedEmployee is not null);
 	}
 
 	/// <summary>Creates an employee or apprentice from the current employee form values.</summary>
+	/// <param name="existingEmployee">The existing employee being edited, if applicable.</param>
 	/// <returns>The employee model represented by the form.</returns>
-	private Employee CreateEmployeeFromInputs()
+	private Employee CreateEmployeeFromInputs(Employee? existingEmployee = null)
 	{
-		Employee employee = EmployeeTypeApprenticeOption.Checked ? new Apprentice() : new Employee();
+		Guid id = existingEmployee?.Id ?? Guid.NewGuid();
+		DateOnly createdAt = existingEmployee?.CreatedAt ?? DateOnly.FromDateTime(DateTime.UtcNow);
+		int employeeNumber = existingEmployee?.EmployeeNumber ?? 0;
+		Employee employee = EmployeeTypeApprenticeOption.Checked
+			? new Apprentice { Id = id, CreatedAt = createdAt, EmployeeNumber = employeeNumber }
+			: new Employee { Id = id, CreatedAt = createdAt, EmployeeNumber = employeeNumber };
+
 		employee.Title = EmployeeTitleInput.SelectedItem is Title selectedTitle
 			? selectedTitle
 			: ParseEnum(EmployeeTitleInput.Text, Title.Unknown);
@@ -961,6 +1122,7 @@ public partial class MainForm : Form
 		ViewCustomerNotes.Enabled = !editable && hasSelection;
 		ViewCustomerHistory.Enabled = !editable && hasSelection;
 		CreateCustomer.Enabled = !editable;
+		CustomersGrid.Enabled = !editable;
 		SaveCustomer.Visible = editable;
 		CancelCustomerEdit.Visible = editable;
 	}
@@ -989,11 +1151,13 @@ public partial class MainForm : Form
 		{
 			input.Enabled = editable;
 		}
+		EmployeeTypeSelection.Enabled = editable && creatingEmployee;
 
 		EditEmployee.Enabled = !editable && hasSelection;
 		DeleteEmployee.Enabled = !editable && hasSelection;
 		ViewEmployeeHistory.Enabled = !editable && hasSelection;
 		CreateEmployee.Enabled = !editable;
+		EmployeesGrid.Enabled = !editable;
 		EmployeeNumberInput.ReadOnly = true;
 		SaveEmployee.Visible = editable;
 		CancelEmployeeEdit.Visible = editable;
