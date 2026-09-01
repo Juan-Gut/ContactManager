@@ -20,7 +20,7 @@ Legende: **Vorbedingung** = Zustand vor dem Test · **Schritte** = was wir in de
 - [ ] Kunde ohne Nachname erfassen → entsprechende Fehlermeldung.
 - [ ] Kunde ohne Firma erfassen → Fehlermeldung "Firma ist für einen Kunden erforderlich".
 - [ ] Kunde mit ungültiger E-Mail-Adresse (z.B. `max@`) erfassen → Fehlermeldung "E-Mail-Adresse ist ungültig".
-- [ ] Kunde mit leerer E-Mail-Adresse erfassen → wird akzeptiert (E-Mail ist laut Logik optional, nur das Format wird geprüft wenn etwas eingegeben wurde).
+- [ ] Kunde ohne E-Mail-Adresse erfassen → Fehlermeldung "E-Mail-Adresse ist erforderlich" (E-Mail ist Pflichtfeld).
 - [ ] Kunde mit Geburtsdatum in der Zukunft erfassen → Fehlermeldung "Geburtsdatum darf nicht in der Zukunft liegen".
 - [ ] Kunde mit Status "passiv" direkt bei der Erfassung anlegen (falls die GUI das zulässt) → wird korrekt als inaktiv gespeichert.
 - [ ] Nach dem Erfassen: Applikation neu starten → neuer Kunde ist noch vorhanden (Persistenz).
@@ -97,7 +97,7 @@ Legende: **Vorbedingung** = Zustand vor dem Test · **Schritte** = was wir in de
 
 ## 9. Persistenz / Speichern & Laden
 
-- [ ] Nach jeder erfolgreichen Änderung (Create/Update/Delete/Aktivieren/Notiz) wird automatisch gespeichert, ohne dass ein manueller "Speichern"-Klick nötig ist.
+- [ ] Eine Änderung wird nur dann gespeichert, wenn man aktiv auf den jeweiligen Button klickt (z.B. "Speichern", "Ja" bei der Löschen-Sicherheitsabfrage) — es gibt kein automatisches Speichern im Hintergrund. Der Klick löst das Speichern sofort aus, ein separater Speichervorgang danach ist nicht nötig.
 - [ ] Applikation normal schliessen und neu starten → alle Daten sind identisch zu vorher.
 - [ ] Applikation über den Task-Manager hart beenden, während gerade **nicht** gespeichert wird, dann neu starten → letzter erfolgreich gespeicherter Stand ist vorhanden (kein Totalverlust der Datei).
 - [ ] Datendatei manuell mit ungültigem Inhalt überschreiben (z.B. Text reinschreiben, der kein gültiges JSON ist), Applikation starten → **klare Fehlermeldung für den Benutzer** (nicht nur eine Konsolenausgabe, die niemand sieht), Applikation stürzt nicht ab.
@@ -109,14 +109,14 @@ Legende: **Vorbedingung** = Zustand vor dem Test · **Schritte** = was wir in de
 - [ ] Sonderzeichen/Umlaute in Namen (ä, ö, ü, é) → werden korrekt gespeichert und wieder angezeigt (auch nach Neustart).
 - [ ] Datumsfeld mit offensichtlich unsinnigem Wert (falls frei eingebbar) → wird abgefangen, kein Absturz.
 
-## 11. Optionale Anforderung (die von uns umgesetzte, hier eintragen: ______________)
+## 11. Optionale Anforderungen (CSV-Import/Export, Login, Dashboard, Mutationshistorie)
 
-- [ ] Grundfunktion der optionalen Anforderung manuell durchgetestet.
-- [ ] Optionale Anforderung übersteht einen Neustart der Applikation (falls sie Daten betrifft).
-- [ ] Falls Import (CSV/VCard) umgesetzt: Beispieldatei liegt bei, Import mit gültiger Datei getestet, Import mit fehlerhafter/beschädigter Datei getestet (keine Abstürze, klare Fehlermeldung).
-- [ ] Falls Login umgesetzt: gültige Zugangsdaten getestet, ungültige Zugangsdaten getestet (klare Fehlermeldung, kein Zugriff), Zugangsdaten für die Abgabe-Textdatei notiert.
-- [ ] Falls Dashboard umgesetzt: Zahlen/Übersicht auf dem Dashboard stimmen mit den tatsächlich gespeicherten Daten überein.
-- [ ] Falls Mutationshistorie umgesetzt: eine Änderung durchführen, prüfen ob sie korrekt protokolliert und einsehbar ist.
+- [ ] CSV-Import: Beispieldatei liegt bei, Import mit gültiger Datei getestet, Import mit fehlerhafter/beschädigter Datei getestet (keine Abstürze, klare Fehlermeldung).
+- [ ] CSV-Export: Export einer bestehenden Kontaktliste getestet, exportierte Datei lässt sich anschliessend wieder erfolgreich importieren.
+- [ ] Login: gültige Zugangsdaten getestet, ungültige Zugangsdaten getestet (klare Fehlermeldung, kein Zugriff), Zugangsdaten für die Abgabe-Textdatei notiert.
+- [ ] Dashboard: Zahlen/Übersicht auf dem Dashboard stimmen mit den tatsächlich gespeicherten Daten überein.
+- [ ] Mutationshistorie: eine Änderung durchführen, prüfen ob sie korrekt protokolliert und einsehbar ist.
+- [ ] Alle vier optionalen Anforderungen übersteht einen Neustart der Applikation (Daten/Konfiguration bleiben erhalten).
 
 ## 12. Allgemeine Stabilität & Usability (Dozenten-Perspektive)
 
