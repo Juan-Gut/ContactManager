@@ -67,4 +67,9 @@ public abstract class Person
 	/// Gets or sets the person's email address.
 	/// </summary>
 	public string EmailAddress { get; set; } = string.Empty;
+
+	/// <summary>
+	/// Gets or sets whether the person is active.
+	/// </summary>
+	public bool IsActive { get; set; } = true;
 }

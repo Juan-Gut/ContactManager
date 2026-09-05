@@ -172,26 +172,26 @@ public sealed class PersonManager
 	}
 
 	/// <summary>
-	/// Activates or deactivates a customer and persists the change.
+	/// Activates or deactivates a person and persists the change.
 	/// </summary>
-	/// <param name="id">The identifier of the customer to change.</param>
+	/// <param name="id">The identifier of the person to change.</param>
 	/// <param name="isActive">The new active state.</param>
-	/// <returns><see langword="true"/> when the customer exists; otherwise, <see langword="false"/>.</returns>
+	/// <returns><see langword="true"/> when the person exists; otherwise, <see langword="false"/>.</returns>
 	public bool SetActive(Guid id, bool isActive)
 	{
-		Customer? customer = _data.Customers.FirstOrDefault(storedCustomer => storedCustomer.Id == id);
-		if (customer is null)
+		Person? person = GetById(id);
+		if (person is null)
 		{
 			return false;
 		}
 
-		if (customer.IsActive == isActive)
+		if (person.IsActive == isActive)
 		{
 			return true;
 		}
 
-		bool previousValue = customer.IsActive;
-		customer.IsActive = isActive;
+		bool previousValue = person.IsActive;
+		person.IsActive = isActive;
 
 		try
 		{
@@ -200,7 +200,7 @@ public sealed class PersonManager
 		}
 		catch
 		{
-			customer.IsActive = previousValue;
+			person.IsActive = previousValue;
 			throw;
 		}
 	}
@@ -293,10 +293,7 @@ public sealed class PersonManager
 		yield return person.CreatedAt.ToString("O", CultureInfo.InvariantCulture);
 		yield return person.Title.ToString();
 		yield return person.Gender.ToString();
-		if (person is Customer customer)
-		{
-			yield return customer.IsActive ? "active" : "inactive";
-		}
+		yield return person.IsActive ? "active" : "passive";
 
 		if (person is Customer customerWithHistory)
 		{

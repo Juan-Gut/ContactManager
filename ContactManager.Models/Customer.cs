@@ -5,10 +5,6 @@ namespace ContactManager.Models;
 /// </summary>
 public sealed class Customer : Person
 {
-	/// <summary>
-	/// Gets or sets whether the customer is active.
-	/// </summary>
-	public bool IsActive { get; set; } = true;
 
 	/// <summary>
 	/// Gets or sets the customer's company.

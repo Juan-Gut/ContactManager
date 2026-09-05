@@ -165,6 +165,9 @@ public partial class MainForm : Form
 		/// <summary>Gets the employee's management level.</summary>
 		public ManagementLevel ManagementLevel { get; init; }
 
+		/// <summary>Gets the employee's active-state display text.</summary>
+		public string Status { get; init; } = string.Empty;
+
 		/// <summary>Gets the apprenticeship duration in years.</summary>
 		public ushort ApprenticeshipDuration { get; init; }
 
@@ -240,7 +243,7 @@ public partial class MainForm : Form
 			Email = customer.EmailAddress,
 			Phone =
 				string.IsNullOrWhiteSpace(customer.BusinessNumber) ? customer.MobileNumber : customer.BusinessNumber,
-			Status = customer.IsActive ? "Active" : "Inactive"
+			Status = customer.IsActive ? "Active" : "Passive"
 		};
 	}
 
@@ -271,6 +274,7 @@ public partial class MainForm : Form
 			EmployeeType = employee is Apprentice ? "Apprentice" : "Employee",
 			OfficeLocation = employee.OfficeLocation,
 			ManagementLevel = employee.ManagementLevel,
+			Status = employee.IsActive ? "Active" : "Passive",
 			ApprenticeshipDuration = employee is Apprentice apprentice ? apprentice.ApprenticeshipDuration : (ushort)0,
 			CurrentApprenticeshipYear = employee is Apprentice apprenticeData
 				? apprenticeData.CurrentApprenticeshipYear
@@ -516,6 +520,7 @@ public partial class MainForm : Form
 		EmployeeBusinessPhoneInput.Text = employee.BusinessNumber;
 		EmployeeMobilePhoneInput.Text = employee.MobileNumber;
 		EmployeeEmailInput.Text = employee.EmailAddress;
+		EmployeeActiveInput.Checked = employee.IsActive;
 		EmployeeDepartmentInput.Text = employee.Department;
 		EmployeeAhvNumberInput.Text = employee.AhvNumber;
 		EmployeeNationalityInput.Text = employee.Nationality;
@@ -523,7 +528,11 @@ public partial class MainForm : Form
 		EmployeeAddressInput.Text = employee.Address;
 		EmployeePostalCodeInput.Text = employee.Plz;
 		SetDatePickerValue(EmployeeStartDateInput, employee.EmploymentStartDate);
-		SetDatePickerValue(EmployeeEndDateInput, employee.EmploymentEndDate);
+		EmployeeIndefiniteInput.Checked = employee.EmploymentEndDate == DateOnly.MaxValue;
+		if (!EmployeeIndefiniteInput.Checked)
+		{
+			SetDatePickerValue(EmployeeEndDateInput, employee.EmploymentEndDate);
+		}
 		SetNumericValue(EmployeeEmploymentPercentageInput, employee.EmploymentPercentage);
 		EmployeeOfficeLocationInput.SelectedItem = employee.OfficeLocation;
 		EmployeeManagementLevelInput.SelectedItem = employee.ManagementLevel;
@@ -551,6 +560,7 @@ public partial class MainForm : Form
 		EmployeeBusinessPhoneInput.Clear();
 		EmployeeMobilePhoneInput.Clear();
 		EmployeeEmailInput.Clear();
+		EmployeeActiveInput.Checked = false;
 		EmployeeDepartmentInput.Clear();
 		EmployeeAhvNumberInput.Clear();
 		EmployeeNationalityInput.Clear();
@@ -558,7 +568,7 @@ public partial class MainForm : Form
 		EmployeeAddressInput.Clear();
 		EmployeePostalCodeInput.Clear();
 		EmployeeStartDateInput.Value = EmployeeStartDateInput.MinDate;
-		EmployeeEndDateInput.Value = EmployeeEndDateInput.MinDate;
+		EmployeeIndefiniteInput.Checked = true;
 		EmployeeEmploymentPercentageInput.Value = EmployeeEmploymentPercentageInput.Minimum;
 		EmployeeOfficeLocationInput.SelectedIndex = -1;
 		EmployeeManagementLevelInput.SelectedIndex = -1;
@@ -579,6 +589,25 @@ public partial class MainForm : Form
 			: value > datePicker.MaxDate
 				? datePicker.MaxDate
 				: value;
+	}
+
+	/// <summary>Displays or clears the employee end-date picker while retaining a valid internal date value.</summary>
+	/// <param name="showDate">Whether the picker should display its selected date.</param>
+	private void SetEmployeeEndDateDisplay(bool showDate)
+	{
+		if (showDate)
+		{
+			EmployeeEndDateInput.CustomFormat = "dd.MM.yyyy";
+			if (EmployeeEndDateInput.Value == EmployeeEndDateInput.MinDate)
+			{
+				EmployeeEndDateInput.Value = DateTime.Today;
+			}
+
+			return;
+		}
+
+		EmployeeEndDateInput.CustomFormat = " ";
+		EmployeeEndDateInput.Value = EmployeeEndDateInput.MinDate;
 	}
 
 	/// <summary>Sets a numeric control to a value constrained to its configured range.</summary>
@@ -787,6 +816,7 @@ public partial class MainForm : Form
 		EmployeeBusinessPhoneInput.Clear();
 		EmployeeMobilePhoneInput.Clear();
 		EmployeeEmailInput.Clear();
+		EmployeeActiveInput.Checked = true;
 		EmployeeDepartmentInput.Clear();
 		EmployeeAhvNumberInput.Clear();
 		EmployeeNationalityInput.Clear();
@@ -794,7 +824,7 @@ public partial class MainForm : Form
 		EmployeeAddressInput.Clear();
 		EmployeePostalCodeInput.Clear();
 		EmployeeStartDateInput.Value = DateTime.Today;
-		EmployeeEndDateInput.Value = new DateTime(2099, 12, 31);
+		EmployeeIndefiniteInput.Checked = true;
 		EmployeeEmploymentPercentageInput.Value = 100;
 		EmployeeOfficeLocationInput.SelectedIndex = 0;
 		EmployeeManagementLevelInput.SelectedIndex = 0;
@@ -934,6 +964,7 @@ public partial class MainForm : Form
 		employee.BusinessNumber = EmployeeBusinessPhoneInput.Text.Trim();
 		employee.MobileNumber = EmployeeMobilePhoneInput.Text.Trim();
 		employee.EmailAddress = EmployeeEmailInput.Text.Trim();
+		employee.IsActive = EmployeeActiveInput.Checked;
 		employee.Department = EmployeeDepartmentInput.Text.Trim();
 		employee.AhvNumber = EmployeeAhvNumberInput.Text.Trim();
 		employee.Nationality = EmployeeNationalityInput.Text.Trim();
@@ -941,7 +972,9 @@ public partial class MainForm : Form
 		employee.Address = EmployeeAddressInput.Text.Trim();
 		employee.Plz = EmployeePostalCodeInput.Text.Trim();
 		employee.EmploymentStartDate = DateOnly.FromDateTime(EmployeeStartDateInput.Value);
-		employee.EmploymentEndDate = DateOnly.FromDateTime(EmployeeEndDateInput.Value);
+		employee.EmploymentEndDate = EmployeeIndefiniteInput.Checked
+			? DateOnly.MaxValue
+			: DateOnly.FromDateTime(EmployeeEndDateInput.Value);
 		employee.EmploymentPercentage = (ushort)EmployeeEmploymentPercentageInput.Value;
 		employee.OfficeLocation = EmployeeOfficeLocationInput.SelectedItem is OfficeLocation selectedOfficeLocation
 			? selectedOfficeLocation
@@ -1067,10 +1100,10 @@ public partial class MainForm : Form
 
 		ApprenticeshipDurationInput.Visible = visible;
 		CurrentApprenticeshipYearInput.Visible = visible;
-		EmployeeDetailsFields.GetControlFromPosition(0, 22)!.Visible = visible;
-		EmployeeDetailsFields.GetControlFromPosition(1, 22)!.Visible = visible;
 		EmployeeDetailsFields.GetControlFromPosition(0, 23)!.Visible = visible;
 		EmployeeDetailsFields.GetControlFromPosition(1, 23)!.Visible = visible;
+		EmployeeDetailsFields.GetControlFromPosition(0, 24)!.Visible = visible;
+		EmployeeDetailsFields.GetControlFromPosition(1, 24)!.Visible = visible;
 	}
 
 	/// <summary>Centers the login preview panel after its host is resized.</summary>
@@ -1146,12 +1179,14 @@ public partial class MainForm : Form
 			         EmployeeTitleInput, EmployeeDateOfBirthInput, EmployeeGenderInput, EmployeeStartDateInput,
 			         EmployeeEndDateInput, EmployeeEmploymentPercentageInput, EmployeeOfficeLocationInput,
 			         EmployeeManagementLevelInput, EmployeeTypeSelection, ApprenticeshipDurationInput,
-			         CurrentApprenticeshipYearInput
+								 CurrentApprenticeshipYearInput, EmployeeActiveInput
 		         })
 		{
 			input.Enabled = editable;
 		}
 		EmployeeTypeSelection.Enabled = editable && creatingEmployee;
+		EmployeeIndefiniteInput.Enabled = editable;
+		EmployeeEndDateInput.Enabled = editable && !EmployeeIndefiniteInput.Checked;
 
 		EditEmployee.Enabled = !editable && hasSelection;
 		DeleteEmployee.Enabled = !editable && hasSelection;
@@ -1161,6 +1196,15 @@ public partial class MainForm : Form
 		EmployeeNumberInput.ReadOnly = true;
 		SaveEmployee.Visible = editable;
 		CancelEmployeeEdit.Visible = editable;
+	}
+
+	/// <summary>Enables or disables the employee end-date picker based on the indefinite option.</summary>
+	/// <param name="sender">The indefinite checkbox.</param>
+	/// <param name="e">The event data.</param>
+	private void EmployeeIndefiniteChanged(object? sender, EventArgs e)
+	{
+		SetEmployeeEndDateDisplay(!EmployeeIndefiniteInput.Checked);
+		EmployeeEndDateInput.Enabled = employeeEditMode && !EmployeeIndefiniteInput.Checked;
 	}
 
 	/// <summary>Displays a safe UI-only phase-one message without relying on a status header.</summary>
