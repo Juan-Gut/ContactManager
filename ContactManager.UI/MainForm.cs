@@ -51,6 +51,7 @@ public partial class MainForm : Form
 		Load += LoadInitialData;
 		Shown += InitializeLayout;
 		MainTabs.SelectedIndexChanged += ResetEditModesOnTabSwitch;
+		MainTabs.SelectedIndexChanged += RefreshDashboardOnTabSelection;
 	}
 
 	/// <summary>Represents the identifying customer data shown in the customer list.</summary>
@@ -175,6 +176,38 @@ public partial class MainForm : Form
 		public ushort CurrentApprenticeshipYear { get; init; }
 	}
 
+	/// <summary>Represents a person displayed in the upcoming-birthdays dashboard list.</summary>
+	private sealed class UpcomingBirthdayRow
+	{
+		/// <summary>Gets the person's display name.</summary>
+		public string PersonName { get; init; } = string.Empty;
+
+		/// <summary>Gets the person's contact type.</summary>
+		public string ContactType { get; init; } = string.Empty;
+
+		/// <summary>Gets the person's date of birth.</summary>
+		public DateOnly DateOfBirth { get; init; }
+
+		/// <summary>Gets the next occurrence of the person's birthday.</summary>
+		public DateOnly NextBirthday { get; init; }
+	}
+
+	/// <summary>Represents an employee displayed in the upcoming-departures dashboard list.</summary>
+	private sealed class UpcomingDepartureRow
+	{
+		/// <summary>Gets the employee number.</summary>
+		public int EmployeeNumber { get; init; }
+
+		/// <summary>Gets the employee's display name.</summary>
+		public string Name { get; init; } = string.Empty;
+
+		/// <summary>Gets the employee's department.</summary>
+		public string Department { get; init; } = string.Empty;
+
+		/// <summary>Gets the employment end date.</summary>
+		public DateOnly EndDate { get; init; }
+	}
+
 	/// <summary>
 	/// Loads the initial customer and employee list projections after the form has been created.
 	/// </summary>
@@ -185,6 +218,7 @@ public partial class MainForm : Form
 		try
 		{
 			IReadOnlyList<Person> people = personManager!.GetAll();
+			RefreshDashboard(people);
 			CustomersGrid.DataSource = people
 				.OfType<Customer>()
 				.Select(CreateCustomerListRow)
@@ -216,6 +250,111 @@ public partial class MainForm : Form
 				Text,
 				MessageBoxButtons.OK,
 				MessageBoxIcon.Error);
+		}
+	}
+
+	/// <summary>Refreshes dashboard metrics and date-based lists from the current contact snapshot.</summary>
+	/// <param name="people">The contact snapshot used to calculate the dashboard.</param>
+	private void RefreshDashboard(IReadOnlyList<Person> people)
+	{
+		DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+		DateOnly birthdayWindowEnd = today.AddDays(30);
+		DateOnly departureWindowEnd = today.AddMonths(6);
+
+		CustomerCount.Text = people.OfType<Customer>().Count().ToString();
+		EmployeeCount.Text = people.OfType<Employee>().Count().ToString();
+		ActiveContactCount.Text = people.Count(person => person.IsActive).ToString();
+
+		UpcomingBirthdaysGrid.DataSource = people
+			.Where(person => person.DateOfBirth != default)
+			.Select(person => CreateUpcomingBirthdayRow(person, today))
+			.Where(row => row.NextBirthday >= today && row.NextBirthday <= birthdayWindowEnd)
+			.OrderBy(row => row.NextBirthday)
+			.ThenBy(row => row.PersonName)
+			.ToList();
+
+		UpcomingDeparturesGrid.DataSource = people
+			.OfType<Employee>()
+			.Where(employee => employee.EmploymentEndDate != DateOnly.MaxValue
+				&& employee.EmploymentEndDate >= today
+				&& employee.EmploymentEndDate <= departureWindowEnd)
+			.OrderBy(employee => employee.EmploymentEndDate)
+			.ThenBy(employee => employee.EmployeeNumber)
+			.Select(employee => new UpcomingDepartureRow
+			{
+				EmployeeNumber = employee.EmployeeNumber,
+				Name = $"{employee.FirstName} {employee.LastName}".Trim(),
+				Department = employee.Department,
+				EndDate = employee.EmploymentEndDate
+			})
+			.ToList();
+
+		UpcomingBirthdays.Text = UpcomingBirthdaysGrid.Rows.Count == 0
+			? "Upcoming birthdays (none in the next 30 days)"
+			: "Upcoming birthdays";
+		UpcomingDepartures.Text = UpcomingDeparturesGrid.Rows.Count == 0
+			? "Contracts ending within six months (none)"
+			: "Contracts ending within six months";
+	}
+
+	/// <summary>Creates a birthday projection using the next occurrence on or after today.</summary>
+	/// <param name="person">The person whose birthday should be projected.</param>
+	/// <param name="today">The date used as the beginning of the dashboard window.</param>
+	/// <returns>The birthday dashboard row.</returns>
+	private static UpcomingBirthdayRow CreateUpcomingBirthdayRow(Person person, DateOnly today)
+	{
+		DateOnly nextBirthday = CreateBirthdayDate(person.DateOfBirth, today.Year);
+		if (nextBirthday < today)
+		{
+			nextBirthday = CreateBirthdayDate(person.DateOfBirth, today.Year + 1);
+		}
+
+		return new UpcomingBirthdayRow
+		{
+			PersonName = $"{person.FirstName} {person.LastName}".Trim(),
+			ContactType = person switch
+			{
+				Customer => "Customer",
+				Apprentice => "Apprentice",
+				Employee => "Employee",
+				_ => "Person"
+			},
+			DateOfBirth = person.DateOfBirth,
+			NextBirthday = nextBirthday
+		};
+	}
+
+	/// <summary>Creates a birthday date for a year, handling February 29 in non-leap years.</summary>
+	/// <param name="dateOfBirth">The original date of birth.</param>
+	/// <param name="year">The year of the next birthday.</param>
+	/// <returns>The birthday date in the requested year.</returns>
+	private static DateOnly CreateBirthdayDate(DateOnly dateOfBirth, int year)
+	{
+		if (dateOfBirth.Month == 2 && dateOfBirth.Day == 29 && !DateTime.IsLeapYear(year))
+		{
+			return new DateOnly(year, 2, 28);
+		}
+
+		return new DateOnly(year, dateOfBirth.Month, dateOfBirth.Day);
+	}
+
+	/// <summary>Refreshes the dashboard when the user enters its tab.</summary>
+	/// <param name="sender">The tab control raising the event.</param>
+	/// <param name="e">The event data.</param>
+	private void RefreshDashboardOnTabSelection(object? sender, EventArgs e)
+	{
+		if (MainTabs.SelectedTab != DashboardTab || personManager is null)
+		{
+			return;
+		}
+
+		try
+		{
+			RefreshDashboard(personManager.GetAll());
+		}
+		catch (Exception exception)
+		{
+			ShowErrorMessage("The dashboard could not be refreshed.\n\n" + exception.Message);
 		}
 	}
 
@@ -680,6 +819,7 @@ public partial class MainForm : Form
 			}
 
 			ReloadCustomers();
+			RefreshDashboard(personManager.GetAll());
 		}
 		catch (Exception exception)
 		{
@@ -733,6 +873,7 @@ public partial class MainForm : Form
 			}
 
 			ReloadCustomers(customer.Id);
+			RefreshDashboard(personManager.GetAll());
 			creatingCustomer = false;
 			SetCustomerEditorMode(false, true);
 		}
@@ -877,6 +1018,7 @@ public partial class MainForm : Form
 			}
 
 			ReloadEmployees();
+			RefreshDashboard(personManager.GetAll());
 		}
 		catch (Exception exception)
 		{
@@ -907,6 +1049,7 @@ public partial class MainForm : Form
 			}
 
 			ReloadEmployees(employee.Id);
+			RefreshDashboard(personManager.GetAll());
 			EmployeeNumberInput.Text = employee.EmployeeNumber.ToString();
 			creatingEmployee = false;
 			SetEmployeeEditorMode(false, true);
