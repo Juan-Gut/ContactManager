@@ -21,6 +21,13 @@ internal static class Program
 
 		try
 		{
+						AuthenticationService authenticationService = new();
+						using LoginForm loginForm = new(authenticationService);
+						if (loginForm.ShowDialog() != DialogResult.OK)
+						{
+								return;
+						}
+
 			IContactRepository repository = new FileRepository();
 			PersonManager personManager = new(repository);
 			Application.Run(new MainForm(personManager));
