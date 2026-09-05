@@ -8,7 +8,45 @@ namespace ContactManager.Logic;
 /// </summary>
 public sealed class EmployeeNrGenerator
 {
+	/// <summary>Defines the first valid employee number.</summary>
 	private const int FirstEmployeeNumber = 1000;
+
+	/// <summary>
+	/// Gets the next available employee number without changing persisted data.
+	/// </summary>
+	/// <param name="data">The current persisted contact data.</param>
+	/// <returns>The next employee number that would be assigned.</returns>
+	/// <exception cref="InvalidOperationException">
+	/// Thrown when no further employee number can be assigned.
+	/// </exception>
+	public int GetNextAvailable(ContactData data)
+	{
+		ArgumentNullException.ThrowIfNull(data);
+
+		var assignedNumbers = data.Employees
+			.Select(storedEmployee => storedEmployee.EmployeeNumber)
+			.Concat(data.Apprentices.Select(apprentice => apprentice.EmployeeNumber))
+			.Where(employeeNumber => employeeNumber >= FirstEmployeeNumber)
+			.ToHashSet();
+
+		int nextEmployeeNumber = Math.Max(data.NextEmployeeNumber, FirstEmployeeNumber);
+		while (assignedNumbers.Contains(nextEmployeeNumber))
+		{
+			if (nextEmployeeNumber == int.MaxValue)
+			{
+				throw new InvalidOperationException("No further employee number can be assigned.");
+			}
+
+			nextEmployeeNumber++;
+		}
+
+		if (nextEmployeeNumber == int.MaxValue)
+		{
+			throw new InvalidOperationException("No further employee number can be assigned.");
+		}
+
+		return nextEmployeeNumber;
+	}
 
 	/// <summary>
 	/// Assigns the next available employee number and advances the persisted counter.
