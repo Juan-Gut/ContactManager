@@ -42,4 +42,16 @@ public sealed partial class LoginForm : Form
 		DialogResult = DialogResult.OK;
 		Close();
 	}
+
+	/// <summary>
+	/// TO DELETE WHEN APP IS FINISHED: Bypasses authentication to speed up local development.
+	/// </summary>
+	/// <param name="sender">The control that raised the event.</param>
+	/// <param name="e">The event data.</param>
+	private void SkipLoginForDevelopment(object? sender, EventArgs e)
+	{
+		// TO DELETE WHEN APP IS FINISHED: Returning OK lets Program start the main form without authentication.
+		DialogResult = DialogResult.OK;
+		Close();
+	}
 }
