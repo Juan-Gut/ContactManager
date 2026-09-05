@@ -24,6 +24,9 @@ public partial class MainForm : Form
 	/// <summary>Indicates whether a new employee is being created.</summary>
 	private bool creatingEmployee;
 
+	/// <summary>Stores the customer whose contact notes are currently displayed.</summary>
+	private Guid? notesCustomerId;
+
 	/// <summary>
 	/// Initializes a new instance of the form for the visual designer.
 	/// </summary>
@@ -107,6 +110,22 @@ public partial class MainForm : Form
 
 		/// <summary>Gets the number of customer contact-history entries.</summary>
 		public int ContactHistoryCount { get; init; }
+	}
+
+	/// <summary>Represents a customer contact note shown in the note-history list.</summary>
+	private sealed class CustomerContactNoteRow
+	{
+		/// <summary>Gets the stable note identifier.</summary>
+		public Guid Id { get; init; }
+
+		/// <summary>Gets the note creation date and time without a timezone suffix.</summary>
+		public string CreatedAt { get; init; } = string.Empty;
+
+		/// <summary>Gets the shortened note text shown in the list.</summary>
+		public string Preview { get; init; } = string.Empty;
+
+		/// <summary>Gets the complete note text.</summary>
+		public string Note { get; init; } = string.Empty;
 	}
 
 	/// <summary>Represents the identifying employee data shown in the employee list.</summary>
@@ -483,6 +502,7 @@ public partial class MainForm : Form
 	{
 		CenterSplitView(CustomersSplitView);
 		CenterSplitView(EmployeesSplitView);
+		CenterCustomerNotesSplitView();
 	}
 
 	/// <summary>Returns both contact editors to view mode when the active tab changes.</summary>
@@ -503,6 +523,17 @@ public partial class MainForm : Form
 	private static void CenterSplitView(SplitContainer splitView)
 	{
 		splitView.SplitterDistance = (splitView.ClientSize.Width - splitView.SplitterWidth) * 2 / 3;
+	}
+
+	/// <summary>Centers the customer note list and note viewer at an even width.</summary>
+	private void CenterCustomerNotesSplitView()
+	{
+		// The notes view can be hidden while the form is initializing, so use its final client height when available.
+		if (CustomerNotesSplitView.ClientSize.Height > CustomerNotesSplitView.SplitterWidth)
+		{
+			CustomerNotesSplitView.SplitterDistance =
+				(CustomerNotesSplitView.ClientSize.Height - CustomerNotesSplitView.SplitterWidth) / 2;
+		}
 	}
 
 	/// <summary>Draws a tab label centered horizontally and vertically.</summary>
@@ -547,6 +578,11 @@ public partial class MainForm : Form
 		CustomerListRow? selectedRow = CustomersGrid.SelectedRows.Count == 1
 			? CustomersGrid.SelectedRows[0].DataBoundItem as CustomerListRow
 			: null;
+		if (CustomerNotesView.Visible && notesCustomerId != selectedRow?.Id)
+		{
+			HideCustomerNotesView(sender, e);
+		}
+
 		Customer? selectedCustomer = selectedRow is null
 			? null
 			: personManager?.GetById(selectedRow.Id) as Customer;
@@ -1137,12 +1173,22 @@ public partial class MainForm : Form
 	/// <summary>Displays the in-place customer notes view.</summary>
 	private void ShowCustomerNotesView(object? sender, EventArgs e)
 	{
+		Customer? selectedCustomer = GetSelectedCustomer();
+		if (selectedCustomer is null)
+		{
+			return;
+		}
+
+		notesCustomerId = selectedCustomer.Id;
+		RefreshCustomerNotes();
 		ShowCustomerNotes(true);
 	}
 
 	/// <summary>Returns from customer notes to the detail view.</summary>
 	private void HideCustomerNotesView(object? sender, EventArgs e)
 	{
+		CancelNewCustomerNote(sender, e);
+		notesCustomerId = null;
 		ShowCustomerNotes(false);
 	}
 
@@ -1191,15 +1237,32 @@ public partial class MainForm : Form
 		CustomerDetailsScrollView.Visible = !visible;
 		CustomerNotesView.Visible = visible;
 		CustomerEditHistoryView.Visible = false;
+		if (!visible)
+		{
+			notesCustomerId = null;
+		}
+
+		if (visible)
+		{
+			CenterCustomerNotesSplitView();
+		}
 	}
 
-	/// <summary>Enters the UI-only new-note state.</summary>
+	/// <summary>Enters new-note mode and gives the note editor balanced space.</summary>
 	private void AddNewCustomerNote(object? sender, EventArgs e)
 	{
+		if (GetSelectedCustomer() is null)
+		{
+			return;
+		}
+
 		NewCustomerNoteArea.Visible = true;
 		SaveCustomerNote.Visible = true;
 		CancelCustomerNote.Visible = true;
 		AddCustomerNote.Visible = false;
+		CustomerNotesLayout.RowStyles[1] = new RowStyle(SizeType.Percent, 30);
+		CustomerNotesLayout.RowStyles[2] = new RowStyle(SizeType.Percent, 70);
+		NewCustomerNoteInput.Focus();
 	}
 
 	/// <summary>Returns from new-note state without persistence.</summary>
@@ -1210,19 +1273,92 @@ public partial class MainForm : Form
 		CancelCustomerNote.Visible = false;
 		AddCustomerNote.Visible = true;
 		NewCustomerNoteInput.Clear();
+		CustomerNotesLayout.RowStyles[1] = new RowStyle(SizeType.Absolute, 0);
+		CustomerNotesLayout.RowStyles[2] = new RowStyle(SizeType.Percent, 100);
 	}
 
-	/// <summary>Shows that note persistence belongs to a later implementation phase.</summary>
+	/// <summary>Validates and persists a new note for the selected customer.</summary>
 	private void SaveNewCustomerNote(object? sender, EventArgs e)
 	{
-		CancelNewCustomerNote(sender, e);
-		ShowPreviewMessage("Customer-note persistence is not connected yet.");
+		Customer? selectedCustomer = GetSelectedCustomer();
+		if (selectedCustomer is null)
+		{
+			CancelNewCustomerNote(sender, e);
+			return;
+		}
+
+		try
+		{
+			if (!personManager!.AddCustomerContact(selectedCustomer.Id, NewCustomerNoteInput.Text))
+			{
+				ShowErrorMessage("The selected customer could not be found.");
+				return;
+			}
+
+			CancelNewCustomerNote(sender, e);
+			ReloadCustomers(selectedCustomer.Id);
+			RefreshCustomerNotes();
+		}
+		catch (ArgumentException exception)
+		{
+			ShowErrorMessage("The customer note could not be saved. Please correct the following:\n\n" + exception.Message);
+		}
+		catch (Exception exception)
+		{
+			ShowErrorMessage("The customer note could not be saved.\n\n" + exception.Message);
+		}
 	}
 
-	/// <summary>Shows the selected note placeholder without loading data.</summary>
+	/// <summary>Displays the complete text of the selected customer note.</summary>
 	private void SelectCustomerNote(object? sender, EventArgs e)
 	{
-		CustomerNoteContent.Text = "Contact-note content will appear here when data is connected.";
+		CustomerNoteContent.Text = CustomerContactEntriesGrid.SelectedRows.Count == 1
+			&& CustomerContactEntriesGrid.SelectedRows[0].DataBoundItem is CustomerContactNoteRow selectedNote
+			? selectedNote.Note
+			: string.Empty;
+	}
+
+	/// <summary>Loads the selected customer's notes into the note-history list.</summary>
+	private void RefreshCustomerNotes()
+	{
+		Customer? selectedCustomer = GetSelectedCustomer();
+		if (selectedCustomer is null)
+		{
+			CustomerContactEntriesGrid.DataSource = null;
+			CustomerNoteContent.Clear();
+			return;
+		}
+
+		CustomerContactEntriesGrid.DataSource = (selectedCustomer.ContactHistory ?? [])
+			.OrderByDescending(entry => entry.CreatedAt)
+			.Select(entry => new CustomerContactNoteRow
+			{
+				Id = entry.Id,
+				CreatedAt = entry.CreatedAt.ToString("dd.MM.yyyy HH:mm"),
+				Preview = CreateNotePreview(entry.Note),
+				Note = entry.Note
+			})
+			.ToList();
+
+		if (CustomerContactEntriesGrid.Rows.Count > 0)
+		{
+			CustomerContactEntriesGrid.Rows[0].Selected = true;
+			CustomerContactEntriesGrid.CurrentCell = CustomerContactEntriesGrid.Rows[0].Cells[0];
+			SelectCustomerNote(CustomerContactEntriesGrid, EventArgs.Empty);
+		}
+		else
+		{
+			CustomerNoteContent.Clear();
+		}
+	}
+
+	/// <summary>Creates a concise single-line preview for the note-history list.</summary>
+	/// <param name="note">The complete note text.</param>
+	/// <returns>A trimmed preview suitable for a grid cell.</returns>
+	private static string CreateNotePreview(string note)
+	{
+		string preview = string.Join(' ', note.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+		return preview.Length <= 80 ? preview : preview[..77] + "...";
 	}
 
 	/// <summary>Updates apprentice-only field visibility from the employee-type radio buttons.</summary>
