@@ -339,12 +339,11 @@ public partial class MainForm : Form
 		}
 	}
 
-	/// <summary>Centers split views and the login preview after the form has its final initial size.</summary>
+	/// <summary>Centers split views after the form has its final initial size.</summary>
 	private void InitializeLayout(object? sender, EventArgs e)
 	{
 		CenterSplitView(CustomersSplitView);
 		CenterSplitView(EmployeesSplitView);
-		CenterLoginPreview(this, EventArgs.Empty);
 	}
 
 	/// <summary>Returns both contact editors to view mode when the active tab changes.</summary>
@@ -1106,18 +1105,6 @@ public partial class MainForm : Form
 		EmployeeDetailsFields.GetControlFromPosition(1, 24)!.Visible = visible;
 	}
 
-	/// <summary>Centers the login preview panel after its host is resized.</summary>
-	private void CenterLoginPreview(object? sender, EventArgs e)
-	{
-		LoginPreview.Left = Math.Max(0, (LoginPreviewArea.ClientSize.Width - LoginPreview.Width) / 2);
-		LoginPreview.Top = Math.Max(0, (LoginPreviewArea.ClientSize.Height - LoginPreview.Height) / 2);
-	}
-
-	/// <summary>Displays the non-authenticating login preview message.</summary>
-	private void PreviewLoginMessage(object? sender, EventArgs e)
-	{
-		ShowPreviewMessage("Authentication will be connected later.");
-	}
 
 	/// <summary>Shows that CSV import will be connected in a later implementation phase.</summary>
 	private void ImportFromCsv(object? sender, EventArgs e)
