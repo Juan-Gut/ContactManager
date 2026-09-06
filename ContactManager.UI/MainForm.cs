@@ -128,6 +128,16 @@ public partial class MainForm : Form
 		public string Note { get; init; } = string.Empty;
 	}
 
+	/// <summary>Represents a metadata-only mutation shown in a contact's history view.</summary>
+	private sealed class MutationHistoryRow
+	{
+		/// <summary>Gets the date and time at which the mutation completed.</summary>
+		public string ChangedAt { get; init; } = string.Empty;
+
+		/// <summary>Gets the action that was completed.</summary>
+		public string Action { get; init; } = string.Empty;
+	}
+
 	/// <summary>Represents the identifying employee data shown in the employee list.</summary>
 	private sealed class EmployeeListRow
 	{
@@ -575,13 +585,10 @@ public partial class MainForm : Form
 	/// <summary>Updates customer action availability when a row is selected.</summary>
 	private void SelectCustomer(object? sender, EventArgs e)
 	{
+		ResetViewsAfterContactSelection();
 		CustomerListRow? selectedRow = CustomersGrid.SelectedRows.Count == 1
 			? CustomersGrid.SelectedRows[0].DataBoundItem as CustomerListRow
 			: null;
-		if (CustomerNotesView.Visible && notesCustomerId != selectedRow?.Id)
-		{
-			HideCustomerNotesView(sender, e);
-		}
 
 		Customer? selectedCustomer = selectedRow is null
 			? null
@@ -639,6 +646,7 @@ public partial class MainForm : Form
 	/// <summary>Updates employee action availability when a row is selected.</summary>
 	private void SelectEmployee(object? sender, EventArgs e)
 	{
+		ResetViewsAfterContactSelection();
 		EmployeeListRow? selectedRow = EmployeesGrid.SelectedRows.Count == 1
 			? EmployeesGrid.SelectedRows[0].DataBoundItem as EmployeeListRow
 			: null;
@@ -656,6 +664,21 @@ public partial class MainForm : Form
 		}
 
 		SetEmployeeEditorMode(employeeEditMode, selectedEmployee is not null);
+	}
+
+	/// <summary>
+	/// Returns all contact detail areas to their normal list/detail state after selection changes.
+	/// </summary>
+	private void ResetViewsAfterContactSelection()
+	{
+		customerEditMode = false;
+		creatingCustomer = false;
+		employeeEditMode = false;
+		creatingEmployee = false;
+		CancelNewCustomerNote(this, EventArgs.Empty);
+		ShowCustomerNotes(false);
+		ShowCustomerEditHistory(false);
+		ShowEmployeeEditHistory(false);
 	}
 
 	/// <summary>Gets the full customer represented by the selected customer-grid row.</summary>
@@ -1195,6 +1218,7 @@ public partial class MainForm : Form
 	/// <summary>Displays the selected customer's edit history view.</summary>
 	private void ShowCustomerEditHistoryView(object? sender, EventArgs e)
 	{
+		RefreshCustomerEditHistory();
 		ShowCustomerEditHistory(true);
 	}
 
@@ -1215,6 +1239,7 @@ public partial class MainForm : Form
 	/// <summary>Displays the selected employee's edit history view.</summary>
 	private void ShowEmployeeEditHistoryView(object? sender, EventArgs e)
 	{
+		RefreshEmployeeEditHistory();
 		ShowEmployeeEditHistory(true);
 	}
 
@@ -1229,6 +1254,42 @@ public partial class MainForm : Form
 	{
 		EmployeeDetailsScrollView.Visible = !visible;
 		EmployeeEditHistoryView.Visible = visible;
+	}
+
+	/// <summary>Loads the selected customer's metadata-only mutation history.</summary>
+	private void RefreshCustomerEditHistory()
+	{
+		Customer? selectedCustomer = GetSelectedCustomer();
+		IReadOnlyList<MutationLogEntry> history = selectedCustomer is null
+			? []
+			: personManager!.GetMutationHistory(selectedCustomer.Id);
+		CustomerEditHistoryGrid.DataSource = history
+			.Select(CreateMutationHistoryRow)
+			.ToList();
+	}
+
+	/// <summary>Loads the selected employee's metadata-only mutation history.</summary>
+	private void RefreshEmployeeEditHistory()
+	{
+		Employee? selectedEmployee = GetSelectedEmployee();
+		IReadOnlyList<MutationLogEntry> history = selectedEmployee is null
+			? []
+			: personManager!.GetMutationHistory(selectedEmployee.Id);
+		EmployeeEditHistoryGrid.DataSource = history
+			.Select(CreateMutationHistoryRow)
+			.ToList();
+	}
+
+	/// <summary>Creates a display row for a mutation without exposing contact values.</summary>
+	/// <param name="mutation">The metadata-only mutation entry.</param>
+	/// <returns>A history row containing only its timestamp and action.</returns>
+	private static MutationHistoryRow CreateMutationHistoryRow(MutationLogEntry mutation)
+	{
+		return new MutationHistoryRow
+		{
+			ChangedAt = mutation.ChangedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss"),
+			Action = mutation.Action
+		};
 	}
 
 	/// <summary>Shows or hides customer notes without hiding the customer detail inputs.</summary>
