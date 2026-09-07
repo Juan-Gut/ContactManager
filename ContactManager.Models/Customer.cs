@@ -5,6 +5,7 @@ namespace ContactManager.Models;
 /// </summary>
 public sealed class Customer : Person
 {
+
 	/// <summary>
 	/// Gets or sets the customer's company.
 	/// </summary>

@@ -26,12 +26,12 @@ public class Employee : Person
 	public string AhvNumber { get; set; } = string.Empty;
 
 	/// <summary>
-	/// Gets or sets the employee's place of residence.
+	/// Gets or sets the employee's nationality.
 	/// </summary>
 	public string Nationality { get; set; } = string.Empty;
 
 	/// <summary>
-	/// Gets or sets the employee's nationality.
+	/// Gets or sets the employee's city of residence.
 	/// </summary>
 	public string City { get; set; } = string.Empty;
 

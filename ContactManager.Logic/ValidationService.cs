@@ -84,6 +84,11 @@ public sealed class ValidationService
 		return errors.AsReadOnly();
 	}
 
+	/// <summary>
+	/// Adds validation errors for employee-specific rules.
+	/// </summary>
+	/// <param name="employee">The employee to validate.</param>
+	/// <param name="errors">The collection receiving validation errors.</param>
 	private static void ValidateEmployee(Employee employee, ICollection<string> errors)
 	{
 		// We allow 16-year-old employees due to the apprenticeship program

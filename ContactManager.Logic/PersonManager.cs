@@ -9,9 +9,13 @@ namespace ContactManager.Logic;
 /// </summary>
 public sealed class PersonManager
 {
+	/// <summary>Stores the loaded customers, employees, and apprentices.</summary>
 	private readonly ContactData _data;
+	/// <summary>Assigns employee numbers when employees are added.</summary>
 	private readonly EmployeeNrGenerator _employeeNrGenerator;
+	/// <summary>Persists contact data.</summary>
 	private readonly IContactRepository _repository;
+	/// <summary>Validates people and customer contact notes.</summary>
 	private readonly ValidationService _validationService;
 
 	/// <summary>
@@ -38,7 +42,7 @@ public sealed class PersonManager
 		_validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
 		_employeeNrGenerator = employeeNrGenerator ?? throw new ArgumentNullException(nameof(employeeNrGenerator));
 		_data = _repository.Load()
-				?? throw new InvalidOperationException("The contact repository returned no contact data.");
+		        ?? throw new InvalidOperationException("The contact repository returned no contact data.");
 
 		_data.Customers ??= [];
 		_data.Employees ??= [];
@@ -67,6 +71,18 @@ public sealed class PersonManager
 	public Person? GetById(Guid id)
 	{
 		return GetAll().FirstOrDefault(person => person.Id == id);
+	}
+
+	/// <summary>
+	/// Gets the next employee number that will be assigned to a new employee.
+	/// </summary>
+	/// <returns>The next available employee number.</returns>
+	/// <exception cref="InvalidOperationException">
+	/// Thrown when no further employee number can be assigned.
+	/// </exception>
+	public int GetNextEmployeeNumber()
+	{
+		return _employeeNrGenerator.GetNextAvailable(_data);
 	}
 
 	/// <summary>
@@ -151,8 +167,8 @@ public sealed class PersonManager
 	public bool Delete(Guid id)
 	{
 		return RemoveAndSave(_data.Customers, id)
-			|| RemoveAndSave(_data.Employees, id)
-			|| RemoveAndSave(_data.Apprentices, id);
+		       || RemoveAndSave(_data.Employees, id)
+		       || RemoveAndSave(_data.Apprentices, id);
 	}
 
 	/// <summary>
@@ -248,11 +264,22 @@ public sealed class PersonManager
 		}
 	}
 
+	/// <summary>
+	/// Determines whether a value contains search text without regard to case.
+	/// </summary>
+	/// <param name="value">The value to search.</param>
+	/// <param name="searchText">The text to find.</param>
+	/// <returns><see langword="true"/> when the value contains the search text; otherwise, <see langword="false"/>.</returns>
 	private static bool Contains(string? value, string searchText)
 	{
 		return value?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true;
 	}
 
+	/// <summary>
+	/// Enumerates searchable values for a person.
+	/// </summary>
+	/// <param name="person">The person whose values should be searched.</param>
+	/// <returns>The searchable values associated with the person.</returns>
 	private static IEnumerable<string?> GetSearchValues(Person person)
 	{
 		yield return person.FirstName;
@@ -266,12 +293,12 @@ public sealed class PersonManager
 		yield return person.CreatedAt.ToString("O", CultureInfo.InvariantCulture);
 		yield return person.Title.ToString();
 		yield return person.Gender.ToString();
-		yield return person.IsActive ? "active aktiv" : "inactive passive passiv deaktiviert";
+		yield return person.IsActive ? "active" : "passive";
 
-		if (person is Customer customer)
+		if (person is Customer customerWithHistory)
 		{
-			yield return customer.Company;
-			foreach (CustomerContactEntry entry in customer.ContactHistory ?? [])
+			yield return customerWithHistory.Company;
+			foreach (CustomerContactEntry entry in customerWithHistory.ContactHistory ?? [])
 			{
 				yield return entry.Note;
 			}
@@ -300,6 +327,12 @@ public sealed class PersonManager
 		}
 	}
 
+	/// <summary>
+	/// Assigns an employee number, adds an employee, and persists the change.
+	/// </summary>
+	/// <typeparam name="TEmployee">The employee type being added.</typeparam>
+	/// <param name="employee">The employee to add.</param>
+	/// <param name="collection">The collection receiving the employee.</param>
 	private void AddEmployee<TEmployee>(TEmployee employee, List<TEmployee> collection)
 		where TEmployee : Employee
 	{
@@ -321,6 +354,12 @@ public sealed class PersonManager
 		}
 	}
 
+	/// <summary>
+	/// Adds a person to a collection and persists the change.
+	/// </summary>
+	/// <typeparam name="TPerson">The person type being added.</typeparam>
+	/// <param name="collection">The collection receiving the person.</param>
+	/// <param name="person">The person to add.</param>
 	private void AddAndSave<TPerson>(List<TPerson> collection, TPerson person)
 		where TPerson : Person
 	{
@@ -337,6 +376,10 @@ public sealed class PersonManager
 		}
 	}
 
+	/// <summary>
+	/// Validates a person and throws when validation errors exist.
+	/// </summary>
+	/// <param name="person">The person to validate.</param>
 	private void EnsureValid(Person person)
 	{
 		IReadOnlyList<string> errors = _validationService.Validate(person);
@@ -346,6 +389,13 @@ public sealed class PersonManager
 		}
 	}
 
+	/// <summary>
+	/// Removes a person from a collection and persists the change.
+	/// </summary>
+	/// <typeparam name="TPerson">The person type stored in the collection.</typeparam>
+	/// <param name="collection">The collection from which to remove the person.</param>
+	/// <param name="id">The identifier of the person to remove.</param>
+	/// <returns><see langword="true"/> when a person was removed; otherwise, <see langword="false"/>.</returns>
 	private bool RemoveAndSave<TPerson>(List<TPerson> collection, Guid id)
 		where TPerson : Person
 	{
@@ -370,6 +420,13 @@ public sealed class PersonManager
 		}
 	}
 
+	/// <summary>
+	/// Replaces a person in a collection and persists the change.
+	/// </summary>
+	/// <typeparam name="TPerson">The person type stored in the collection.</typeparam>
+	/// <param name="collection">The collection containing the person.</param>
+	/// <param name="person">The replacement person.</param>
+	/// <returns><see langword="true"/> when a person was replaced; otherwise, <see langword="false"/>.</returns>
 	private bool ReplaceAndSave<TPerson>(List<TPerson> collection, TPerson person)
 		where TPerson : Person
 	{
