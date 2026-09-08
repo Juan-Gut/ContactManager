@@ -1,0 +1,4 @@
+Type;Title;FirstName;LastName;DateOfBirth;Gender;JobTitle;BusinessNumber;MobileNumber;EmailAddress;IsActive;Company;Department;AhvNumber;Nationality;City;Address;Plz;EmploymentStartDate;EmploymentEndDate;EmploymentPercentage;OfficeLocation;ManagementLevel;ApprenticeshipDuration;CurrentApprenticeshipYear
+Customer;Ms;Lina;Meier;1988-06-14;Female;Einkaufsleiterin;+41 44 555 01 10;+41 79 555 01 10;lina.meier@example.ch;true;Alpina AG;;;;;;;;;;;;;
+Employee;Mr;Noah;Keller;1985-11-03;Male;System Engineer;+41 44 555 02 20;+41 79 555 02 20;noah.keller@example.ch;true;;IT;756.1234.5678.97;Swiss;Zurich;Badenerstrasse 10;8004;2020-02-01;;80;Zurich;TeamLeader;;
+Apprentice;Ms;Mia;Rossi;2008-03-21;Female;Informatikerin EFZ;;+41 79 555 03 30;mia.rossi@example.ch;true;;IT;756.9876.5432.10;Swiss;StGallen;Rosenbergstrasse 8;9000;2025-08-01;2029-07-31;100;StGallen;None;4;2

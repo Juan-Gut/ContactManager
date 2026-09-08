@@ -136,6 +136,93 @@ public sealed class PersonManager
 	}
 
 	/// <summary>
+	/// Adds a validated collection of imported contacts and persists the complete batch once.
+	/// </summary>
+	/// <param name="people">The customers, employees, and apprentices to import.</param>
+	/// <returns>The number of imported contacts.</returns>
+	/// <remarks>
+	/// The operation is atomic from the application's perspective: if validation, employee-number
+	/// assignment, or persistence fails, no contact from the batch remains in memory.
+	/// </remarks>
+	/// <exception cref="ArgumentException">Thrown when a contact is invalid or has an unsupported type.</exception>
+	/// <exception cref="InvalidOperationException">Thrown when an identifier is duplicated.</exception>
+	public int Import(IEnumerable<Person> people)
+	{
+		ArgumentNullException.ThrowIfNull(people);
+		List<Person> contacts = people.ToList();
+		if (contacts.Count == 0)
+		{
+			return 0;
+		}
+
+		HashSet<Guid> identifiers = GetAll().Select(person => person.Id).ToHashSet();
+		foreach (Person contact in contacts)
+		{
+			EnsureValid(contact);
+			if (!identifiers.Add(contact.Id))
+			{
+				throw new InvalidOperationException(
+					$"A person with identifier '{contact.Id}' occurs more than once or already exists.");
+			}
+
+			if (contact is not Customer and not Employee)
+			{
+				throw new ArgumentException(
+					$"The person type '{contact.GetType().Name}' is not supported.",
+					nameof(people));
+			}
+		}
+
+		int previousCustomerCount = _data.Customers.Count;
+		int previousEmployeeCount = _data.Employees.Count;
+		int previousApprenticeCount = _data.Apprentices.Count;
+		int previousMutationCount = _data.MutationHistory.Count;
+		int previousNextEmployeeNumber = _data.NextEmployeeNumber;
+		Dictionary<Employee, int> previousEmployeeNumbers = contacts
+			.OfType<Employee>()
+			.ToDictionary(employee => employee, employee => employee.EmployeeNumber);
+
+		try
+		{
+			foreach (Person contact in contacts)
+			{
+				switch (contact)
+				{
+					case Apprentice apprentice:
+						_employeeNrGenerator.AssignNext(apprentice, _data);
+						_data.Apprentices.Add(apprentice);
+						break;
+					case Employee employee:
+						_employeeNrGenerator.AssignNext(employee, _data);
+						_data.Employees.Add(employee);
+						break;
+					case Customer customer:
+						_data.Customers.Add(customer);
+						break;
+				}
+
+				AddMutationLog(contact, "Imported from contact file");
+			}
+
+			_repository.Save(_data);
+			return contacts.Count;
+		}
+		catch
+		{
+			_data.Customers.RemoveRange(previousCustomerCount, _data.Customers.Count - previousCustomerCount);
+			_data.Employees.RemoveRange(previousEmployeeCount, _data.Employees.Count - previousEmployeeCount);
+			_data.Apprentices.RemoveRange(previousApprenticeCount, _data.Apprentices.Count - previousApprenticeCount);
+			_data.MutationHistory.RemoveRange(previousMutationCount, _data.MutationHistory.Count - previousMutationCount);
+			_data.NextEmployeeNumber = previousNextEmployeeNumber;
+			foreach ((Employee employee, int employeeNumber) in previousEmployeeNumbers)
+			{
+				employee.EmployeeNumber = employeeNumber;
+			}
+			throw;
+		}
+	}
+
+	/// <summary>
 	/// Updates and persists an existing person.
 	/// </summary>
 	/// <param name="person">The updated person.</param>
