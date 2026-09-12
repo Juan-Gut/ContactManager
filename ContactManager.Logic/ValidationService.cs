@@ -48,15 +48,27 @@ public sealed class ValidationService
 			errors.Add("The date of birth cannot be in the future.");
 		}
 
-		if (!string.IsNullOrWhiteSpace(person.EmailAddress)
+		if (string.IsNullOrWhiteSpace(person.EmailAddress))
+		{
+			errors.Add("The email address is required.");
+		}
+		else if (!string.IsNullOrWhiteSpace(person.EmailAddress)
 			&& !MailAddress.TryCreate(person.EmailAddress, out _))
 		{
 			errors.Add("The email address is invalid.");
 		}
 
-		if (person is Customer customer && string.IsNullOrWhiteSpace(customer.Company))
+		if (person is Customer customer)
 		{
-			errors.Add("The company is required for a customer.");
+			if (string.IsNullOrWhiteSpace(customer.JobTitle))
+			{
+				errors.Add("The job title is required.");
+			}
+
+			if (string.IsNullOrWhiteSpace(customer.Company))
+			{
+				errors.Add("The company is required.");
+			}
 		}
 
 		if (person is Employee employee)
