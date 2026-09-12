@@ -24,6 +24,12 @@ public partial class MainForm : Form
 	/// <summary>Indicates whether a new employee is being created.</summary>
 	private bool creatingEmployee;
 
+	/// <summary>Stores the customer whose contact notes are currently displayed.</summary>
+	private Guid? notesCustomerId;
+
+	/// <summary>Indicates whether customer selection events should leave the current view unchanged.</summary>
+	private bool suppressCustomerSelectionReset;
+
 	/// <summary>
 	/// Initializes a new instance of the form for the visual designer.
 	/// </summary>
@@ -51,6 +57,7 @@ public partial class MainForm : Form
 		Load += LoadInitialData;
 		Shown += InitializeLayout;
 		MainTabs.SelectedIndexChanged += ResetEditModesOnTabSwitch;
+		MainTabs.SelectedIndexChanged += RefreshDashboardOnTabSelection;
 	}
 
 	/// <summary>Represents the identifying customer data shown in the customer list.</summary>
@@ -106,6 +113,32 @@ public partial class MainForm : Form
 
 		/// <summary>Gets the number of customer contact-history entries.</summary>
 		public int ContactHistoryCount { get; init; }
+	}
+
+	/// <summary>Represents a customer contact note shown in the note-history list.</summary>
+	private sealed class CustomerContactNoteRow
+	{
+		/// <summary>Gets the stable note identifier.</summary>
+		public Guid Id { get; init; }
+
+		/// <summary>Gets the note creation date and time without a timezone suffix.</summary>
+		public string CreatedAt { get; init; } = string.Empty;
+
+		/// <summary>Gets the shortened note text shown in the list.</summary>
+		public string Preview { get; init; } = string.Empty;
+
+		/// <summary>Gets the complete note text.</summary>
+		public string Note { get; init; } = string.Empty;
+	}
+
+	/// <summary>Represents a metadata-only mutation shown in a contact's history view.</summary>
+	private sealed class MutationHistoryRow
+	{
+		/// <summary>Gets the date and time at which the mutation completed.</summary>
+		public string ChangedAt { get; init; } = string.Empty;
+
+		/// <summary>Gets the action that was completed.</summary>
+		public string Action { get; init; } = string.Empty;
 	}
 
 	/// <summary>Represents the identifying employee data shown in the employee list.</summary>
@@ -175,6 +208,38 @@ public partial class MainForm : Form
 		public ushort CurrentApprenticeshipYear { get; init; }
 	}
 
+	/// <summary>Represents a person displayed in the upcoming-birthdays dashboard list.</summary>
+	private sealed class UpcomingBirthdayRow
+	{
+		/// <summary>Gets the person's display name.</summary>
+		public string PersonName { get; init; } = string.Empty;
+
+		/// <summary>Gets the person's contact type.</summary>
+		public string ContactType { get; init; } = string.Empty;
+
+		/// <summary>Gets the person's date of birth.</summary>
+		public DateOnly DateOfBirth { get; init; }
+
+		/// <summary>Gets the next occurrence of the person's birthday.</summary>
+		public DateOnly NextBirthday { get; init; }
+	}
+
+	/// <summary>Represents an employee displayed in the upcoming-departures dashboard list.</summary>
+	private sealed class UpcomingDepartureRow
+	{
+		/// <summary>Gets the employee number.</summary>
+		public int EmployeeNumber { get; init; }
+
+		/// <summary>Gets the employee's display name.</summary>
+		public string Name { get; init; } = string.Empty;
+
+		/// <summary>Gets the employee's department.</summary>
+		public string Department { get; init; } = string.Empty;
+
+		/// <summary>Gets the employment end date.</summary>
+		public DateOnly EndDate { get; init; }
+	}
+
 	/// <summary>
 	/// Loads the initial customer and employee list projections after the form has been created.
 	/// </summary>
@@ -185,6 +250,7 @@ public partial class MainForm : Form
 		try
 		{
 			IReadOnlyList<Person> people = personManager!.GetAll();
+			RefreshDashboard(people);
 			CustomersGrid.DataSource = people
 				.OfType<Customer>()
 				.Select(CreateCustomerListRow)
@@ -216,6 +282,111 @@ public partial class MainForm : Form
 				Text,
 				MessageBoxButtons.OK,
 				MessageBoxIcon.Error);
+		}
+	}
+
+	/// <summary>Refreshes dashboard metrics and date-based lists from the current contact snapshot.</summary>
+	/// <param name="people">The contact snapshot used to calculate the dashboard.</param>
+	private void RefreshDashboard(IReadOnlyList<Person> people)
+	{
+		DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+		DateOnly birthdayWindowEnd = today.AddDays(30);
+		DateOnly departureWindowEnd = today.AddMonths(6);
+
+		CustomerCount.Text = people.OfType<Customer>().Count().ToString();
+		EmployeeCount.Text = people.OfType<Employee>().Count().ToString();
+		ActiveContactCount.Text = people.Count(person => person.IsActive).ToString();
+
+		UpcomingBirthdaysGrid.DataSource = people
+			.Where(person => person.DateOfBirth != default)
+			.Select(person => CreateUpcomingBirthdayRow(person, today))
+			.Where(row => row.NextBirthday >= today && row.NextBirthday <= birthdayWindowEnd)
+			.OrderBy(row => row.NextBirthday)
+			.ThenBy(row => row.PersonName)
+			.ToList();
+
+		UpcomingDeparturesGrid.DataSource = people
+			.OfType<Employee>()
+			.Where(employee => employee.EmploymentEndDate != DateOnly.MaxValue
+				&& employee.EmploymentEndDate >= today
+				&& employee.EmploymentEndDate <= departureWindowEnd)
+			.OrderBy(employee => employee.EmploymentEndDate)
+			.ThenBy(employee => employee.EmployeeNumber)
+			.Select(employee => new UpcomingDepartureRow
+			{
+				EmployeeNumber = employee.EmployeeNumber,
+				Name = $"{employee.FirstName} {employee.LastName}".Trim(),
+				Department = employee.Department,
+				EndDate = employee.EmploymentEndDate
+			})
+			.ToList();
+
+		UpcomingBirthdays.Text = UpcomingBirthdaysGrid.Rows.Count == 0
+			? "Upcoming birthdays (none in the next 30 days)"
+			: "Upcoming birthdays";
+		UpcomingDepartures.Text = UpcomingDeparturesGrid.Rows.Count == 0
+			? "Contracts ending within six months (none)"
+			: "Contracts ending within six months";
+	}
+
+	/// <summary>Creates a birthday projection using the next occurrence on or after today.</summary>
+	/// <param name="person">The person whose birthday should be projected.</param>
+	/// <param name="today">The date used as the beginning of the dashboard window.</param>
+	/// <returns>The birthday dashboard row.</returns>
+	private static UpcomingBirthdayRow CreateUpcomingBirthdayRow(Person person, DateOnly today)
+	{
+		DateOnly nextBirthday = CreateBirthdayDate(person.DateOfBirth, today.Year);
+		if (nextBirthday < today)
+		{
+			nextBirthday = CreateBirthdayDate(person.DateOfBirth, today.Year + 1);
+		}
+
+		return new UpcomingBirthdayRow
+		{
+			PersonName = $"{person.FirstName} {person.LastName}".Trim(),
+			ContactType = person switch
+			{
+				Customer => "Customer",
+				Apprentice => "Apprentice",
+				Employee => "Employee",
+				_ => "Person"
+			},
+			DateOfBirth = person.DateOfBirth,
+			NextBirthday = nextBirthday
+		};
+	}
+
+	/// <summary>Creates a birthday date for a year, handling February 29 in non-leap years.</summary>
+	/// <param name="dateOfBirth">The original date of birth.</param>
+	/// <param name="year">The year of the next birthday.</param>
+	/// <returns>The birthday date in the requested year.</returns>
+	private static DateOnly CreateBirthdayDate(DateOnly dateOfBirth, int year)
+	{
+		if (dateOfBirth.Month == 2 && dateOfBirth.Day == 29 && !DateTime.IsLeapYear(year))
+		{
+			return new DateOnly(year, 2, 28);
+		}
+
+		return new DateOnly(year, dateOfBirth.Month, dateOfBirth.Day);
+	}
+
+	/// <summary>Refreshes the dashboard when the user enters its tab.</summary>
+	/// <param name="sender">The tab control raising the event.</param>
+	/// <param name="e">The event data.</param>
+	private void RefreshDashboardOnTabSelection(object? sender, EventArgs e)
+	{
+		if (MainTabs.SelectedTab != DashboardTab || personManager is null)
+		{
+			return;
+		}
+
+		try
+		{
+			RefreshDashboard(personManager.GetAll());
+		}
+		catch (Exception exception)
+		{
+			ShowErrorMessage("The dashboard could not be refreshed.\n\n" + exception.Message);
 		}
 	}
 
@@ -286,27 +457,37 @@ public partial class MainForm : Form
 	/// Reloads the customer projection and optionally selects a customer by stable identifier.
 	/// </summary>
 	/// <param name="selectedCustomerId">The customer to select after reloading, if any.</param>
-	private void ReloadCustomers(Guid? selectedCustomerId = null)
+	/// <param name="preserveCurrentView">Whether selection events during rebinding should preserve the current view.</param>
+	private void ReloadCustomers(Guid? selectedCustomerId = null, bool preserveCurrentView = false)
 	{
-		CustomersGrid.DataSource = personManager!.GetAll()
-			.OfType<Customer>()
-			.Select(CreateCustomerListRow)
-			.ToList();
-
-		if (selectedCustomerId is not Guid id)
+		bool previousSuppression = suppressCustomerSelectionReset;
+		suppressCustomerSelectionReset |= preserveCurrentView;
+		try
 		{
-			return;
-		}
+			CustomersGrid.DataSource = personManager!.GetAll()
+				.OfType<Customer>()
+				.Select(CreateCustomerListRow)
+				.ToList();
 
-		for (int rowIndex = 0; rowIndex < CustomersGrid.Rows.Count; rowIndex++)
-		{
-			if (CustomersGrid.Rows[rowIndex].DataBoundItem is CustomerListRow { Id: var rowId } && rowId == id)
+			if (selectedCustomerId is not Guid id)
 			{
-				CustomersGrid.ClearSelection();
-				CustomersGrid.Rows[rowIndex].Selected = true;
-				CustomersGrid.CurrentCell = CustomersGrid.Rows[rowIndex].Cells[0];
-				break;
+				return;
 			}
+
+			for (int rowIndex = 0; rowIndex < CustomersGrid.Rows.Count; rowIndex++)
+			{
+				if (CustomersGrid.Rows[rowIndex].DataBoundItem is CustomerListRow { Id: var rowId } && rowId == id)
+				{
+					CustomersGrid.ClearSelection();
+					CustomersGrid.Rows[rowIndex].Selected = true;
+					CustomersGrid.CurrentCell = CustomersGrid.Rows[rowIndex].Cells[0];
+					break;
+				}
+			}
+		}
+		finally
+		{
+			suppressCustomerSelectionReset = previousSuppression;
 		}
 	}
 
@@ -344,6 +525,7 @@ public partial class MainForm : Form
 	{
 		CenterSplitView(CustomersSplitView);
 		CenterSplitView(EmployeesSplitView);
+		CenterCustomerNotesSplitView();
 	}
 
 	/// <summary>Returns both contact editors to view mode when the active tab changes.</summary>
@@ -364,6 +546,17 @@ public partial class MainForm : Form
 	private static void CenterSplitView(SplitContainer splitView)
 	{
 		splitView.SplitterDistance = (splitView.ClientSize.Width - splitView.SplitterWidth) * 2 / 3;
+	}
+
+	/// <summary>Centers the customer note list and note viewer at an even width.</summary>
+	private void CenterCustomerNotesSplitView()
+	{
+		// The notes view can be hidden while the form is initializing, so use its final client height when available.
+		if (CustomerNotesSplitView.ClientSize.Height > CustomerNotesSplitView.SplitterWidth)
+		{
+			CustomerNotesSplitView.SplitterDistance =
+				(CustomerNotesSplitView.ClientSize.Height - CustomerNotesSplitView.SplitterWidth) / 2;
+		}
 	}
 
 	/// <summary>Draws a tab label centered horizontally and vertically.</summary>
@@ -405,9 +598,14 @@ public partial class MainForm : Form
 	/// <summary>Updates customer action availability when a row is selected.</summary>
 	private void SelectCustomer(object? sender, EventArgs e)
 	{
+		if (!suppressCustomerSelectionReset)
+		{
+			ResetViewsAfterContactSelection();
+		}
 		CustomerListRow? selectedRow = CustomersGrid.SelectedRows.Count == 1
 			? CustomersGrid.SelectedRows[0].DataBoundItem as CustomerListRow
 			: null;
+
 		Customer? selectedCustomer = selectedRow is null
 			? null
 			: personManager?.GetById(selectedRow.Id) as Customer;
@@ -464,6 +662,7 @@ public partial class MainForm : Form
 	/// <summary>Updates employee action availability when a row is selected.</summary>
 	private void SelectEmployee(object? sender, EventArgs e)
 	{
+		ResetViewsAfterContactSelection();
 		EmployeeListRow? selectedRow = EmployeesGrid.SelectedRows.Count == 1
 			? EmployeesGrid.SelectedRows[0].DataBoundItem as EmployeeListRow
 			: null;
@@ -481,6 +680,21 @@ public partial class MainForm : Form
 		}
 
 		SetEmployeeEditorMode(employeeEditMode, selectedEmployee is not null);
+	}
+
+	/// <summary>
+	/// Returns all contact detail areas to their normal list/detail state after selection changes.
+	/// </summary>
+	private void ResetViewsAfterContactSelection()
+	{
+		customerEditMode = false;
+		creatingCustomer = false;
+		employeeEditMode = false;
+		creatingEmployee = false;
+		CancelNewCustomerNote(this, EventArgs.Empty);
+		ShowCustomerNotes(false);
+		ShowCustomerEditHistory(false);
+		ShowEmployeeEditHistory(false);
 	}
 
 	/// <summary>Gets the full customer represented by the selected customer-grid row.</summary>
@@ -680,6 +894,7 @@ public partial class MainForm : Form
 			}
 
 			ReloadCustomers();
+			RefreshDashboard(personManager.GetAll());
 		}
 		catch (Exception exception)
 		{
@@ -733,6 +948,7 @@ public partial class MainForm : Form
 			}
 
 			ReloadCustomers(customer.Id);
+			RefreshDashboard(personManager.GetAll());
 			creatingCustomer = false;
 			SetCustomerEditorMode(false, true);
 		}
@@ -877,6 +1093,7 @@ public partial class MainForm : Form
 			}
 
 			ReloadEmployees();
+			RefreshDashboard(personManager.GetAll());
 		}
 		catch (Exception exception)
 		{
@@ -907,6 +1124,7 @@ public partial class MainForm : Form
 			}
 
 			ReloadEmployees(employee.Id);
+			RefreshDashboard(personManager.GetAll());
 			EmployeeNumberInput.Text = employee.EmployeeNumber.ToString();
 			creatingEmployee = false;
 			SetEmployeeEditorMode(false, true);
@@ -994,18 +1212,29 @@ public partial class MainForm : Form
 	/// <summary>Displays the in-place customer notes view.</summary>
 	private void ShowCustomerNotesView(object? sender, EventArgs e)
 	{
+		Customer? selectedCustomer = GetSelectedCustomer();
+		if (selectedCustomer is null)
+		{
+			return;
+		}
+
+		notesCustomerId = selectedCustomer.Id;
+		RefreshCustomerNotes();
 		ShowCustomerNotes(true);
 	}
 
 	/// <summary>Returns from customer notes to the detail view.</summary>
 	private void HideCustomerNotesView(object? sender, EventArgs e)
 	{
+		CancelNewCustomerNote(sender, e);
+		notesCustomerId = null;
 		ShowCustomerNotes(false);
 	}
 
 	/// <summary>Displays the selected customer's edit history view.</summary>
 	private void ShowCustomerEditHistoryView(object? sender, EventArgs e)
 	{
+		RefreshCustomerEditHistory();
 		ShowCustomerEditHistory(true);
 	}
 
@@ -1026,6 +1255,7 @@ public partial class MainForm : Form
 	/// <summary>Displays the selected employee's edit history view.</summary>
 	private void ShowEmployeeEditHistoryView(object? sender, EventArgs e)
 	{
+		RefreshEmployeeEditHistory();
 		ShowEmployeeEditHistory(true);
 	}
 
@@ -1042,21 +1272,74 @@ public partial class MainForm : Form
 		EmployeeEditHistoryView.Visible = visible;
 	}
 
+	/// <summary>Loads the selected customer's metadata-only mutation history.</summary>
+	private void RefreshCustomerEditHistory()
+	{
+		Customer? selectedCustomer = GetSelectedCustomer();
+		IReadOnlyList<MutationLogEntry> history = selectedCustomer is null
+			? []
+			: personManager!.GetMutationHistory(selectedCustomer.Id);
+		CustomerEditHistoryGrid.DataSource = history
+			.Select(CreateMutationHistoryRow)
+			.ToList();
+	}
+
+	/// <summary>Loads the selected employee's metadata-only mutation history.</summary>
+	private void RefreshEmployeeEditHistory()
+	{
+		Employee? selectedEmployee = GetSelectedEmployee();
+		IReadOnlyList<MutationLogEntry> history = selectedEmployee is null
+			? []
+			: personManager!.GetMutationHistory(selectedEmployee.Id);
+		EmployeeEditHistoryGrid.DataSource = history
+			.Select(CreateMutationHistoryRow)
+			.ToList();
+	}
+
+	/// <summary>Creates a display row for a mutation without exposing contact values.</summary>
+	/// <param name="mutation">The metadata-only mutation entry.</param>
+	/// <returns>A history row containing only its timestamp and action.</returns>
+	private static MutationHistoryRow CreateMutationHistoryRow(MutationLogEntry mutation)
+	{
+		return new MutationHistoryRow
+		{
+			ChangedAt = mutation.ChangedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss"),
+			Action = mutation.Action
+		};
+	}
+
 	/// <summary>Shows or hides customer notes without hiding the customer detail inputs.</summary>
 	private void ShowCustomerNotes(bool visible)
 	{
 		CustomerDetailsScrollView.Visible = !visible;
 		CustomerNotesView.Visible = visible;
 		CustomerEditHistoryView.Visible = false;
+		if (!visible)
+		{
+			notesCustomerId = null;
+		}
+
+		if (visible)
+		{
+			CenterCustomerNotesSplitView();
+		}
 	}
 
-	/// <summary>Enters the UI-only new-note state.</summary>
+	/// <summary>Enters new-note mode and gives the note editor balanced space.</summary>
 	private void AddNewCustomerNote(object? sender, EventArgs e)
 	{
+		if (GetSelectedCustomer() is null)
+		{
+			return;
+		}
+
 		NewCustomerNoteArea.Visible = true;
 		SaveCustomerNote.Visible = true;
 		CancelCustomerNote.Visible = true;
 		AddCustomerNote.Visible = false;
+		CustomerNotesLayout.RowStyles[1] = new RowStyle(SizeType.Percent, 30);
+		CustomerNotesLayout.RowStyles[2] = new RowStyle(SizeType.Percent, 70);
+		NewCustomerNoteInput.Focus();
 	}
 
 	/// <summary>Returns from new-note state without persistence.</summary>
@@ -1067,19 +1350,92 @@ public partial class MainForm : Form
 		CancelCustomerNote.Visible = false;
 		AddCustomerNote.Visible = true;
 		NewCustomerNoteInput.Clear();
+		CustomerNotesLayout.RowStyles[1] = new RowStyle(SizeType.Absolute, 0);
+		CustomerNotesLayout.RowStyles[2] = new RowStyle(SizeType.Percent, 100);
 	}
 
-	/// <summary>Shows that note persistence belongs to a later implementation phase.</summary>
+	/// <summary>Validates and persists a new note for the selected customer.</summary>
 	private void SaveNewCustomerNote(object? sender, EventArgs e)
 	{
-		CancelNewCustomerNote(sender, e);
-		ShowPreviewMessage("Customer-note persistence is not connected yet.");
+		Customer? selectedCustomer = GetSelectedCustomer();
+		if (selectedCustomer is null)
+		{
+			CancelNewCustomerNote(sender, e);
+			return;
+		}
+
+		try
+		{
+			if (!personManager!.AddCustomerContact(selectedCustomer.Id, NewCustomerNoteInput.Text))
+			{
+				ShowErrorMessage("The selected customer could not be found.");
+				return;
+			}
+
+			CancelNewCustomerNote(sender, e);
+			ReloadCustomers(selectedCustomer.Id, preserveCurrentView: true);
+			RefreshCustomerNotes();
+		}
+		catch (ArgumentException exception)
+		{
+			ShowErrorMessage("The customer note could not be saved. Please correct the following:\n\n" + exception.Message);
+		}
+		catch (Exception exception)
+		{
+			ShowErrorMessage("The customer note could not be saved.\n\n" + exception.Message);
+		}
 	}
 
-	/// <summary>Shows the selected note placeholder without loading data.</summary>
+	/// <summary>Displays the complete text of the selected customer note.</summary>
 	private void SelectCustomerNote(object? sender, EventArgs e)
 	{
-		CustomerNoteContent.Text = "Contact-note content will appear here when data is connected.";
+		CustomerNoteContent.Text = CustomerContactEntriesGrid.SelectedRows.Count == 1
+			&& CustomerContactEntriesGrid.SelectedRows[0].DataBoundItem is CustomerContactNoteRow selectedNote
+			? selectedNote.Note
+			: string.Empty;
+	}
+
+	/// <summary>Loads the selected customer's notes into the note-history list.</summary>
+	private void RefreshCustomerNotes()
+	{
+		Customer? selectedCustomer = GetSelectedCustomer();
+		if (selectedCustomer is null)
+		{
+			CustomerContactEntriesGrid.DataSource = null;
+			CustomerNoteContent.Clear();
+			return;
+		}
+
+		CustomerContactEntriesGrid.DataSource = (selectedCustomer.ContactHistory ?? [])
+			.OrderByDescending(entry => entry.CreatedAt)
+			.Select(entry => new CustomerContactNoteRow
+			{
+				Id = entry.Id,
+				CreatedAt = entry.CreatedAt.ToString("dd.MM.yyyy HH:mm"),
+				Preview = CreateNotePreview(entry.Note),
+				Note = entry.Note
+			})
+			.ToList();
+
+		if (CustomerContactEntriesGrid.Rows.Count > 0)
+		{
+			CustomerContactEntriesGrid.Rows[0].Selected = true;
+			CustomerContactEntriesGrid.CurrentCell = CustomerContactEntriesGrid.Rows[0].Cells[0];
+			SelectCustomerNote(CustomerContactEntriesGrid, EventArgs.Empty);
+		}
+		else
+		{
+			CustomerNoteContent.Clear();
+		}
+	}
+
+	/// <summary>Creates a concise single-line preview for the note-history list.</summary>
+	/// <param name="note">The complete note text.</param>
+	/// <returns>A trimmed preview suitable for a grid cell.</returns>
+	private static string CreateNotePreview(string note)
+	{
+		string preview = string.Join(' ', note.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+		return preview.Length <= 80 ? preview : preview[..77] + "...";
 	}
 
 	/// <summary>Updates apprentice-only field visibility from the employee-type radio buttons.</summary>

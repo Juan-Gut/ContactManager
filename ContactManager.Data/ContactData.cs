@@ -37,4 +37,9 @@ public sealed class ContactData
 	/// Gets or sets the stored apprentices.
 	/// </summary>
 	public List<Apprentice> Apprentices { get; set; } = [];
+
+	/// <summary>
+	/// Gets or sets the append-only metadata log of successful mutations.
+	/// </summary>
+	public List<MutationLogEntry> MutationHistory { get; set; } = [];
 }

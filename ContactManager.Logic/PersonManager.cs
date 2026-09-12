@@ -47,6 +47,7 @@ public sealed class PersonManager
 		_data.Customers ??= [];
 		_data.Employees ??= [];
 		_data.Apprentices ??= [];
+		_data.MutationHistory ??= [];
 	}
 
 	/// <summary>
@@ -83,6 +84,20 @@ public sealed class PersonManager
 	public int GetNextEmployeeNumber()
 	{
 		return _employeeNrGenerator.GetNextAvailable(_data);
+	}
+
+	/// <summary>
+	/// Gets the metadata-only mutation history for a contact.
+	/// </summary>
+	/// <param name="contactId">The stable identifier of the contact.</param>
+	/// <returns>A read-only snapshot ordered from newest to oldest.</returns>
+	public IReadOnlyList<MutationLogEntry> GetMutationHistory(Guid contactId)
+	{
+		return _data.MutationHistory
+			.Where(entry => entry.ContactId == contactId)
+			.OrderByDescending(entry => entry.ChangedAt)
+			.ToList()
+			.AsReadOnly();
 	}
 
 	/// <summary>
@@ -192,6 +207,9 @@ public sealed class PersonManager
 
 		bool previousValue = person.IsActive;
 		person.IsActive = isActive;
+		MutationLogEntry mutation = AddMutationLog(
+			person,
+			isActive ? "Activated" : "Deactivated");
 
 		try
 		{
@@ -201,6 +219,7 @@ public sealed class PersonManager
 		catch
 		{
 			person.IsActive = previousValue;
+			_data.MutationHistory.Remove(mutation);
 			throw;
 		}
 	}
@@ -251,6 +270,7 @@ public sealed class PersonManager
 			Note = note.Trim()
 		};
 		customer.ContactHistory.Add(entry);
+		MutationLogEntry mutation = AddMutationLog(customer, "Customer contact note added");
 
 		try
 		{
@@ -260,6 +280,7 @@ public sealed class PersonManager
 		catch
 		{
 			customer.ContactHistory.Remove(entry);
+			_data.MutationHistory.Remove(mutation);
 			throw;
 		}
 	}
@@ -343,10 +364,12 @@ public sealed class PersonManager
 		try
 		{
 			collection.Add(employee);
+			AddMutationLog(employee, "Created");
 			_repository.Save(_data);
 		}
 		catch
 		{
+			RemoveLatestMutation(employee.Id);
 			collection.Remove(employee);
 			employee.EmployeeNumber = previousEmployeeNumber;
 			_data.NextEmployeeNumber = previousNextEmployeeNumber;
@@ -364,6 +387,7 @@ public sealed class PersonManager
 		where TPerson : Person
 	{
 		collection.Add(person);
+		MutationLogEntry mutation = AddMutationLog(person, "Created");
 
 		try
 		{
@@ -371,6 +395,7 @@ public sealed class PersonManager
 		}
 		catch
 		{
+			_data.MutationHistory.Remove(mutation);
 			collection.Remove(person);
 			throw;
 		}
@@ -406,7 +431,9 @@ public sealed class PersonManager
 		}
 
 		TPerson person = collection[index];
+		List<MutationLogEntry> previousMutationHistory = [.. _data.MutationHistory];
 		collection.RemoveAt(index);
+		_data.MutationHistory.RemoveAll(entry => entry.ContactId == person.Id);
 
 		try
 		{
@@ -416,6 +443,7 @@ public sealed class PersonManager
 		catch
 		{
 			collection.Insert(index, person);
+			_data.MutationHistory = previousMutationHistory;
 			throw;
 		}
 	}
@@ -438,6 +466,7 @@ public sealed class PersonManager
 
 		TPerson previousPerson = collection[index];
 		collection[index] = person;
+		MutationLogEntry mutation = AddMutationLog(person, CreateUpdateAction(previousPerson, person));
 
 		try
 		{
@@ -446,8 +475,113 @@ public sealed class PersonManager
 		}
 		catch
 		{
+			_data.MutationHistory.Remove(mutation);
 			collection[index] = previousPerson;
 			throw;
+		}
+	}
+
+	/// <summary>
+	/// Creates a descriptive update action from changed field names without including field values.
+	/// </summary>
+	/// <param name="previousPerson">The person before the update.</param>
+	/// <param name="updatedPerson">The person after the update.</param>
+	/// <returns>An action description containing the affected field names only.</returns>
+	private static string CreateUpdateAction(Person previousPerson, Person updatedPerson)
+	{
+		List<string> changedFields = [];
+		if (previousPerson.Title != updatedPerson.Title) { changedFields.Add("Title"); }
+		if (previousPerson.FirstName != updatedPerson.FirstName) { changedFields.Add("First name"); }
+		if (previousPerson.LastName != updatedPerson.LastName) { changedFields.Add("Last name"); }
+		if (previousPerson.DateOfBirth != updatedPerson.DateOfBirth) { changedFields.Add("Date of birth"); }
+		if (previousPerson.Gender != updatedPerson.Gender) { changedFields.Add("Gender"); }
+		if (previousPerson.JobTitle != updatedPerson.JobTitle) { changedFields.Add("Job title"); }
+		if (previousPerson.BusinessNumber != updatedPerson.BusinessNumber) { changedFields.Add("Business phone"); }
+		if (previousPerson.MobileNumber != updatedPerson.MobileNumber) { changedFields.Add("Mobile phone"); }
+		if (previousPerson.EmailAddress != updatedPerson.EmailAddress) { changedFields.Add("Email address"); }
+		if (previousPerson.IsActive != updatedPerson.IsActive) { changedFields.Add("Active status"); }
+
+		if (previousPerson is Customer previousCustomer && updatedPerson is Customer updatedCustomer)
+		{
+			if (previousCustomer.Company != updatedCustomer.Company) { changedFields.Add("Company"); }
+		}
+
+		if (previousPerson is Employee previousEmployee && updatedPerson is Employee updatedEmployee)
+		{
+			if (previousEmployee.Department != updatedEmployee.Department) { changedFields.Add("Department"); }
+			if (previousEmployee.AhvNumber != updatedEmployee.AhvNumber) { changedFields.Add("AHV number"); }
+			if (previousEmployee.Nationality != updatedEmployee.Nationality) { changedFields.Add("Nationality"); }
+			if (previousEmployee.City != updatedEmployee.City) { changedFields.Add("City"); }
+			if (previousEmployee.Address != updatedEmployee.Address) { changedFields.Add("Address"); }
+			if (previousEmployee.Plz != updatedEmployee.Plz) { changedFields.Add("Postal code"); }
+			if (previousEmployee.EmploymentStartDate != updatedEmployee.EmploymentStartDate)
+			{
+				changedFields.Add("Employment start date");
+			}
+			if (previousEmployee.EmploymentEndDate != updatedEmployee.EmploymentEndDate)
+			{
+				changedFields.Add("Employment end date");
+			}
+			if (previousEmployee.EmploymentPercentage != updatedEmployee.EmploymentPercentage)
+			{
+				changedFields.Add("Employment percentage");
+			}
+			if (previousEmployee.OfficeLocation != updatedEmployee.OfficeLocation)
+			{
+				changedFields.Add("Office location");
+			}
+			if (previousEmployee.ManagementLevel != updatedEmployee.ManagementLevel)
+			{
+				changedFields.Add("Management level");
+			}
+		}
+
+		if (previousPerson is Apprentice previousApprentice && updatedPerson is Apprentice updatedApprentice)
+		{
+			if (previousApprentice.ApprenticeshipDuration != updatedApprentice.ApprenticeshipDuration)
+			{
+				changedFields.Add("Apprenticeship duration");
+			}
+			if (previousApprentice.CurrentApprenticeshipYear != updatedApprentice.CurrentApprenticeshipYear)
+			{
+				changedFields.Add("Current apprenticeship year");
+			}
+		}
+
+		return changedFields.Count == 0
+			? "Updated contact information (no field values changed)"
+			: $"Updated contact information ({string.Join(", ", changedFields)})";
+	}
+
+	/// <summary>
+	/// Adds a metadata-only entry to the mutation history.
+	/// </summary>
+	/// <param name="person">The contact affected by the mutation.</param>
+	/// <param name="action">The completed action, without changed values.</param>
+	/// <returns>The entry added to the in-memory history.</returns>
+	private MutationLogEntry AddMutationLog(Person person, string action)
+	{
+		MutationLogEntry mutation = new()
+		{
+			ContactId = person.Id,
+			Action = action
+		};
+
+		_data.MutationHistory.Add(mutation);
+		return mutation;
+	}
+
+	/// <summary>
+	/// Removes the most recent mutation entry for a contact when persistence fails.
+	/// </summary>
+	/// <param name="contactId">The contact whose failed mutation should be removed.</param>
+	private void RemoveLatestMutation(Guid contactId)
+	{
+		MutationLogEntry? mutation = _data.MutationHistory
+			.LastOrDefault(entry => entry.ContactId == contactId);
+		if (mutation is not null)
+		{
+			_data.MutationHistory.Remove(mutation);
 		}
 	}
 }
