@@ -410,7 +410,7 @@ public sealed class PersonManager
 		IReadOnlyList<string> errors = _validationService.Validate(person);
 		if (errors.Count > 0)
 		{
-			throw new ArgumentException(string.Join(Environment.NewLine, errors), nameof(person));
+			throw new ArgumentException(string.Join(Environment.NewLine, errors));
 		}
 	}
 
