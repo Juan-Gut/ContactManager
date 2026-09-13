@@ -155,6 +155,10 @@ public sealed class ValidationService
 		{
 			errors.Add("The AHV number is required.");
 		}
+		else if (!IsValidAhvNumber(employee.AhvNumber))
+		{
+			errors.Add("The AHV number must follow the Swiss format (Start with 756 and contain exactly 13 digits).");
+		}
 
 		if (string.IsNullOrWhiteSpace(employee.Nationality))
 		{
@@ -218,5 +222,20 @@ public sealed class ValidationService
 		{
 			errors.Add("The current apprenticeship year must be within the apprenticeship duration.");
 		}
+	}
+
+	/// <summary>
+	/// Determines whether an AHV number has the expected 13-digit Swiss format.
+	/// </summary>
+	/// <param name="ahvNumber">The AHV number to validate.</param>
+	/// <returns><see langword="true"/> when the normalized number starts with 756 and contains 13 digits; otherwise, <see langword="false"/>.</returns>
+	private static bool IsValidAhvNumber(string ahvNumber)
+	{
+		string normalizedAhvNumber = string.Concat(
+			ahvNumber.Where(character => !char.IsWhiteSpace(character) && character != '.'));
+
+		return normalizedAhvNumber.Length == 13
+			&& normalizedAhvNumber.StartsWith("756", StringComparison.Ordinal)
+			&& normalizedAhvNumber.All(character => character is >= '0' and <= '9');
 	}
 }
