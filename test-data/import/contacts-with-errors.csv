@@ -1,0 +1,5 @@
+Type,Title,FirstName,LastName,DateOfBirth,Gender,EmailAddress,IsActive,Company,EmploymentStartDate,EmploymentPercentage,ApprenticeshipDuration,CurrentApprenticeshipYear
+Customer,Ms,Ana,Graf,1991-02-18,Female,ana.graf@example.ch,true,Graf Consulting,,,,
+Customer,Mr,Fehler,OhneFirma,1979-10-09,Male,not-an-email,true,,,,,
+Employee,Mr,Zu,Jung,2015-05-01,Male,zu.jung@example.ch,true,,2026-08-01,120,,
+Apprentice,Ms,Sara,Muster,2007-07-07,Female,sara.muster@example.ch,true,,2025-08-01,100,3,4
