@@ -749,7 +749,9 @@ public partial class MainForm : Form
 		SetNumericValue(EmployeeEmploymentPercentageInput, employee.EmploymentPercentage);
 		EmployeeOfficeLocationInput.SelectedItem = employee.OfficeLocation;
 		EmployeeManagementLevelInput.SelectedItem = employee.ManagementLevel;
-		EmployeeTypeApprenticeOption.Checked = employee is Apprentice;
+		bool isApprentice = employee is Apprentice;
+		EmployeeTypeEmployeeOption.Checked = !isApprentice;
+		EmployeeTypeApprenticeOption.Checked = isApprentice;
 
 		if (employee is Apprentice apprentice)
 		{
