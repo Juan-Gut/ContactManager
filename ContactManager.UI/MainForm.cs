@@ -30,6 +30,9 @@ public partial class MainForm : Form
 	/// <summary>Stores the customer whose contact notes are currently displayed.</summary>
 	private Guid? notesCustomerId;
 
+	/// <summary>Indicates whether customer selection events should leave the current view unchanged.</summary>
+	private bool suppressCustomerSelectionReset;
+
 	/// <summary>
 	/// Initializes a new instance of the form for the visual designer.
 	/// </summary>
@@ -458,27 +461,37 @@ public partial class MainForm : Form
 	/// Reloads the customer projection and optionally selects a customer by stable identifier.
 	/// </summary>
 	/// <param name="selectedCustomerId">The customer to select after reloading, if any.</param>
-	private void ReloadCustomers(Guid? selectedCustomerId = null)
+	/// <param name="preserveCurrentView">Whether selection events during rebinding should preserve the current view.</param>
+	private void ReloadCustomers(Guid? selectedCustomerId = null, bool preserveCurrentView = false)
 	{
-		CustomersGrid.DataSource = personManager!.GetAll()
-			.OfType<Customer>()
-			.Select(CreateCustomerListRow)
-			.ToList();
-
-		if (selectedCustomerId is not Guid id)
+		bool previousSuppression = suppressCustomerSelectionReset;
+		suppressCustomerSelectionReset |= preserveCurrentView;
+		try
 		{
-			return;
-		}
+			CustomersGrid.DataSource = personManager!.GetAll()
+				.OfType<Customer>()
+				.Select(CreateCustomerListRow)
+				.ToList();
 
-		for (int rowIndex = 0; rowIndex < CustomersGrid.Rows.Count; rowIndex++)
-		{
-			if (CustomersGrid.Rows[rowIndex].DataBoundItem is CustomerListRow { Id: var rowId } && rowId == id)
+			if (selectedCustomerId is not Guid id)
 			{
-				CustomersGrid.ClearSelection();
-				CustomersGrid.Rows[rowIndex].Selected = true;
-				CustomersGrid.CurrentCell = CustomersGrid.Rows[rowIndex].Cells[0];
-				break;
+				return;
 			}
+
+			for (int rowIndex = 0; rowIndex < CustomersGrid.Rows.Count; rowIndex++)
+			{
+				if (CustomersGrid.Rows[rowIndex].DataBoundItem is CustomerListRow { Id: var rowId } && rowId == id)
+				{
+					CustomersGrid.ClearSelection();
+					CustomersGrid.Rows[rowIndex].Selected = true;
+					CustomersGrid.CurrentCell = CustomersGrid.Rows[rowIndex].Cells[0];
+					break;
+				}
+			}
+		}
+		finally
+		{
+			suppressCustomerSelectionReset = previousSuppression;
 		}
 	}
 
@@ -589,7 +602,10 @@ public partial class MainForm : Form
 	/// <summary>Updates customer action availability when a row is selected.</summary>
 	private void SelectCustomer(object? sender, EventArgs e)
 	{
-		ResetViewsAfterContactSelection();
+		if (!suppressCustomerSelectionReset)
+		{
+			ResetViewsAfterContactSelection();
+		}
 		CustomerListRow? selectedRow = CustomersGrid.SelectedRows.Count == 1
 			? CustomersGrid.SelectedRows[0].DataBoundItem as CustomerListRow
 			: null;
@@ -1361,7 +1377,7 @@ public partial class MainForm : Form
 			}
 
 			CancelNewCustomerNote(sender, e);
-			ReloadCustomers(selectedCustomer.Id);
+			ReloadCustomers(selectedCustomer.Id, preserveCurrentView: true);
 			RefreshCustomerNotes();
 		}
 		catch (ArgumentException exception)
