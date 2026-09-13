@@ -1,6 +1,6 @@
 # Beispiel-Dateien für den Kontaktimport
 
-Der Import befindet sich global unter **File > Import contacts…** (`Ctrl+I`). Dort können CSV- und vCard-Dateien ausgewählt werden. Vor dem Speichern zeigt die Anwendung alle gültigen Kontakte sowie Warnungen und Fehler. Fehlerhafte Zeilen bzw. Karten werden übersprungen; gültige Kontakte werden erst nach der Bestätigung gemeinsam gespeichert.
+Der Import ist über die jederzeit sichtbare Schaltfläche **Import contacts…** oberhalb der Registerkarten (`Ctrl+I`) erreichbar. Dort können CSV- und vCard-Dateien ausgewählt werden. Vor dem Speichern zeigt die Anwendung alle gültigen Kontakte sowie Warnungen und Fehler. Fehlerhafte Zeilen bzw. Karten werden übersprungen; gültige Kontakte werden erst nach der Bestätigung gemeinsam gespeichert. Kontakte mit einer E-Mail-Adresse oder AHV-Nummer, die bereits gespeichert ist oder vorher in derselben Datei vorkommt, werden als mögliche Duplikate markiert und standardmässig abgewählt. Bei Bedarf lassen sie sich bewusst wieder auswählen.
 
 ## Dateien
 

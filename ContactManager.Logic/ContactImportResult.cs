@@ -15,15 +15,29 @@ public enum ContactImportIssueSeverity
 }
 
 /// <summary>
+/// Identifies whether an import issue is a general parsing problem or a possible duplicate.
+/// </summary>
+public enum ContactImportIssueKind
+{
+	/// <summary>A normal parsing, conversion, or validation issue.</summary>
+	General,
+
+	/// <summary>A warning that the candidate may already exist.</summary>
+	PotentialDuplicate
+}
+
+/// <summary>
 /// Describes a problem found while reading a contact import file.
 /// </summary>
 /// <param name="Source">The CSV row or vCard number in which the issue occurred.</param>
 /// <param name="Message">A user-readable explanation of the problem.</param>
 /// <param name="Severity">The effect the problem has on the import.</param>
+/// <param name="Kind">The category used by the preview to offer an appropriate default action.</param>
 public sealed record ContactImportIssue(
 	string Source,
 	string Message,
-	ContactImportIssueSeverity Severity = ContactImportIssueSeverity.Error);
+	ContactImportIssueSeverity Severity = ContactImportIssueSeverity.Error,
+	ContactImportIssueKind Kind = ContactImportIssueKind.General);
 
 /// <summary>
 /// Associates a valid imported contact with its location in the source file.

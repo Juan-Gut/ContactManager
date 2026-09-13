@@ -8,10 +8,8 @@ partial class MainForm
     private System.ComponentModel.IContainer components = null;
 
     private TableLayoutPanel MainLayout = null!;
-    private MenuStrip MainMenu = null!;
-    private ToolStripMenuItem FileMenu = null!;
-    private ToolStripMenuItem ImportContactsMenuItem = null!;
-    private ToolStripMenuItem ExportToCsvMenuItem = null!;
+    private ToolStrip MainToolbar = null!;
+    private ToolStripButton ImportContactsButton = null!;
     private TabControl MainTabs = null!;
     private TabPage DashboardTab = null!;
     private TabPage CustomersTab = null!;
@@ -159,7 +157,7 @@ partial class MainForm
     private void InitializeComponent()
     {
         components = new System.ComponentModel.Container();
-        MainLayout = new TableLayoutPanel(); MainMenu = new MenuStrip(); FileMenu = new ToolStripMenuItem(); ImportContactsMenuItem = new ToolStripMenuItem(); ExportToCsvMenuItem = new ToolStripMenuItem();
+        MainLayout = new TableLayoutPanel(); MainToolbar = new ToolStrip(); ImportContactsButton = new ToolStripButton();
         MainTabs = new TabControl();
         DashboardTab = new TabPage("Dashboard"); CustomersTab = new TabPage("Customers"); EmployeesTab = new TabPage("Employees");
         DashboardLayout = new TableLayoutPanel(); DashboardHeading = new Label(); MetricsLayout = new TableLayoutPanel(); CustomerMetrics = new GroupBox(); EmployeeMetrics = new GroupBox(); ActiveContactMetrics = new GroupBox(); CustomerCount = new Label(); EmployeeCount = new Label(); ActiveContactCount = new Label(); DashboardListsLayout = new TableLayoutPanel(); UpcomingBirthdays = new GroupBox(); UpcomingDepartures = new GroupBox(); UpcomingBirthdaysGrid = new DataGridView(); UpcomingDeparturesGrid = new DataGridView();
@@ -170,7 +168,7 @@ partial class MainForm
 
         SuspendLayout();
         Text = "Contact Manager"; StartPosition = FormStartPosition.CenterScreen; WindowState = FormWindowState.Maximized; MinimumSize = new Size(1100, 700); ClientSize = new Size(1400, 900); AutoScaleMode = AutoScaleMode.Font;
-        MainLayout.Dock = DockStyle.Fill; MainLayout.ColumnCount = 1; MainLayout.RowCount = 2; MainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 24)); MainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); MainMenu.Dock = DockStyle.Fill; FileMenu.Text = "File"; ImportContactsMenuItem.Text = "Import contacts…"; ImportContactsMenuItem.ShortcutKeys = Keys.Control | Keys.I; ExportToCsvMenuItem.Text = "Export to CSV"; ImportContactsMenuItem.Click += ImportContacts; ExportToCsvMenuItem.Click += ExportToCsv; FileMenu.DropDownItems.AddRange(new ToolStripItem[] { ImportContactsMenuItem, ExportToCsvMenuItem }); MainMenu.Items.Add(FileMenu); MainLayout.Controls.Add(MainMenu, 0, 0);
+        MainLayout.Dock = DockStyle.Fill; MainLayout.ColumnCount = 1; MainLayout.RowCount = 2; MainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38)); MainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); MainToolbar.Dock = DockStyle.Fill; MainToolbar.GripStyle = ToolStripGripStyle.Hidden; MainToolbar.Padding = new Padding(8, 4, 8, 4); ImportContactsButton.Text = "Import contacts…"; ImportContactsButton.ToolTipText = "Import contacts from CSV or vCard (Ctrl+I)"; ImportContactsButton.DisplayStyle = ToolStripItemDisplayStyle.Text; ImportContactsButton.Click += ImportContacts; MainToolbar.Items.Add(ImportContactsButton); MainLayout.Controls.Add(MainToolbar, 0, 0);
         MainTabs.Dock = DockStyle.Fill; MainTabs.Padding = new Point(12, 6); MainTabs.SizeMode = TabSizeMode.Fixed; MainTabs.ItemSize = new Size(120, 32); MainTabs.DrawMode = TabDrawMode.OwnerDrawFixed; MainTabs.DrawItem += DrawMainTab; DashboardTab.Padding = new Padding(12); CustomersTab.Padding = new Padding(12); EmployeesTab.Padding = new Padding(12); MainTabs.TabPages.AddRange(new[] { DashboardTab, CustomersTab, EmployeesTab }); MainLayout.Controls.Add(MainTabs, 0, 1); Controls.Add(MainLayout);
 
         DashboardLayout.Dock = DockStyle.Fill; DashboardLayout.Padding = new Padding(14); DashboardLayout.ColumnCount = 1; DashboardLayout.RowCount = 3; DashboardLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42)); DashboardLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 125)); DashboardLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); DashboardHeading.Text = "Dashboard"; DashboardHeading.Dock = DockStyle.Fill; DashboardHeading.Font = new Font(Font, FontStyle.Bold); DashboardHeading.Font = new Font(DashboardHeading.Font.FontFamily, 16, FontStyle.Bold); DashboardHeading.TextAlign = ContentAlignment.MiddleLeft; DashboardLayout.Controls.Add(DashboardHeading, 0, 0);
