@@ -513,7 +513,7 @@ public sealed class PersonManager
 			if (previousEmployee.Nationality != updatedEmployee.Nationality) { changedFields.Add("Nationality"); }
 			if (previousEmployee.City != updatedEmployee.City) { changedFields.Add("City"); }
 			if (previousEmployee.Address != updatedEmployee.Address) { changedFields.Add("Address"); }
-			if (previousEmployee.Plz != updatedEmployee.Plz) { changedFields.Add("Postal code"); }
+			if (previousEmployee.Plz != updatedEmployee.Plz) { changedFields.Add("PLZ"); }
 			if (previousEmployee.EmploymentStartDate != updatedEmployee.EmploymentStartDate)
 			{
 				changedFields.Add("Employment start date");

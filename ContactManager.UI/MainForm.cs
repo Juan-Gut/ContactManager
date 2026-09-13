@@ -739,7 +739,7 @@ public partial class MainForm : Form
 		EmployeeNationalityInput.Text = employee.Nationality;
 		EmployeeCityInput.Text = employee.City;
 		EmployeeAddressInput.Text = employee.Address;
-		EmployeePostalCodeInput.Text = employee.Plz;
+		EmployeePlzInput.Text = employee.Plz;
 		SetDatePickerValue(EmployeeStartDateInput, employee.EmploymentStartDate);
 		EmployeeIndefiniteInput.Checked = employee.EmploymentEndDate == DateOnly.MaxValue;
 		if (!EmployeeIndefiniteInput.Checked)
@@ -779,7 +779,7 @@ public partial class MainForm : Form
 		EmployeeNationalityInput.Clear();
 		EmployeeCityInput.Clear();
 		EmployeeAddressInput.Clear();
-		EmployeePostalCodeInput.Clear();
+		EmployeePlzInput.Clear();
 		EmployeeStartDateInput.Value = EmployeeStartDateInput.MinDate;
 		EmployeeIndefiniteInput.Checked = true;
 		EmployeeEmploymentPercentageInput.Value = EmployeeEmploymentPercentageInput.Minimum;
@@ -1037,7 +1037,7 @@ public partial class MainForm : Form
 		EmployeeNationalityInput.Clear();
 		EmployeeCityInput.Clear();
 		EmployeeAddressInput.Clear();
-		EmployeePostalCodeInput.Clear();
+		EmployeePlzInput.Clear();
 		EmployeeStartDateInput.Value = DateTime.Today;
 		EmployeeIndefiniteInput.Checked = true;
 		EmployeeEmploymentPercentageInput.Value = 100;
@@ -1187,7 +1187,7 @@ public partial class MainForm : Form
 		employee.Nationality = EmployeeNationalityInput.Text.Trim();
 		employee.City = EmployeeCityInput.Text.Trim();
 		employee.Address = EmployeeAddressInput.Text.Trim();
-		employee.Plz = EmployeePostalCodeInput.Text.Trim();
+		employee.Plz = EmployeePlzInput.Text.Trim();
 		employee.EmploymentStartDate = DateOnly.FromDateTime(EmployeeStartDateInput.Value);
 		employee.EmploymentEndDate = EmployeeIndefiniteInput.Checked
 			? DateOnly.MaxValue
@@ -1510,7 +1510,7 @@ public partial class MainForm : Form
 		foreach (TextBox input in new TextBox[]
 		         {
 			         EmployeeFirstNameInput, EmployeeLastNameInput, EmployeeDepartmentInput, EmployeeAhvNumberInput,
-			         EmployeeNationalityInput, EmployeeCityInput, EmployeeAddressInput, EmployeePostalCodeInput,
+			         EmployeeNationalityInput, EmployeeCityInput, EmployeeAddressInput, EmployeePlzInput,
 			         EmployeeJobTitleInput, EmployeeBusinessPhoneInput, EmployeeMobilePhoneInput, EmployeeEmailInput
 		         })
 		{

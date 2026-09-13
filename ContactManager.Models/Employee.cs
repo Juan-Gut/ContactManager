@@ -41,7 +41,7 @@ public class Employee : Person
 	public string Address { get; set; } = string.Empty;
 
 	/// <summary>
-	/// Gets or sets the employee's postal code.
+	/// Gets or sets the employee's PLZ.
 	/// </summary>
 	public string Plz { get; set; } = string.Empty;
 

@@ -177,11 +177,11 @@ public sealed class ValidationService
 
 		if (string.IsNullOrWhiteSpace(employee.Plz))
 		{
-			errors.Add("The postal code is required.");
+							errors.Add("The PLZ is required.");
 		}
 		else if (!employee.Plz.All(character => character is >= '0' and <= '9'))
 		{
-			errors.Add("The postal code may contain only digits.");
+			errors.Add("The PLZ may contain only digits.");
 		}
 
 		// We allow 16-year-old employees due to the apprenticeship program
