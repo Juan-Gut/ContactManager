@@ -42,7 +42,7 @@ public partial class MainForm
 		foreach (TextBox input in new TextBox[]
 		         {
 			         EmployeeFirstNameInput, EmployeeLastNameInput, EmployeeDepartmentInput, EmployeeAhvNumberInput,
-			         EmployeeNationalityInput, EmployeeCityInput, EmployeeAddressInput, EmployeePostalCodeInput,
+			         EmployeeNationalityInput, EmployeeCityInput, EmployeeAddressInput, EmployeePlzInput,
 			         EmployeeJobTitleInput, EmployeeBusinessPhoneInput, EmployeeMobilePhoneInput, EmployeeEmailInput
 		         })
 		{

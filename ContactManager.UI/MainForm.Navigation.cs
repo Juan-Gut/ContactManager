@@ -292,7 +292,7 @@ public partial class MainForm
 		EmployeeNationalityInput.Text = employee.Nationality;
 		EmployeeCityInput.Text = employee.City;
 		EmployeeAddressInput.Text = employee.Address;
-		EmployeePostalCodeInput.Text = employee.Plz;
+		EmployeePlzInput.Text = employee.Plz;
 		SetDatePickerValue(EmployeeStartDateInput, employee.EmploymentStartDate);
 		EmployeeIndefiniteInput.Checked = employee.EmploymentEndDate == DateOnly.MaxValue;
 		if (!EmployeeIndefiniteInput.Checked)
@@ -302,7 +302,9 @@ public partial class MainForm
 		SetNumericValue(EmployeeEmploymentPercentageInput, employee.EmploymentPercentage);
 		EmployeeOfficeLocationInput.SelectedItem = employee.OfficeLocation;
 		EmployeeManagementLevelInput.SelectedItem = employee.ManagementLevel;
-		EmployeeTypeApprenticeOption.Checked = employee is Apprentice;
+		bool isApprentice = employee is Apprentice;
+		EmployeeTypeEmployeeOption.Checked = !isApprentice;
+		EmployeeTypeApprenticeOption.Checked = isApprentice;
 
 		if (employee is Apprentice apprentice)
 		{
@@ -332,7 +334,7 @@ public partial class MainForm
 		EmployeeNationalityInput.Clear();
 		EmployeeCityInput.Clear();
 		EmployeeAddressInput.Clear();
-		EmployeePostalCodeInput.Clear();
+		EmployeePlzInput.Clear();
 		EmployeeStartDateInput.Value = EmployeeStartDateInput.MinDate;
 		EmployeeIndefiniteInput.Checked = true;
 		EmployeeEmploymentPercentageInput.Value = EmployeeEmploymentPercentageInput.Minimum;

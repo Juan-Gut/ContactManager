@@ -212,7 +212,7 @@ public partial class MainForm
 		EmployeeNationalityInput.Clear();
 		EmployeeCityInput.Clear();
 		EmployeeAddressInput.Clear();
-		EmployeePostalCodeInput.Clear();
+		EmployeePlzInput.Clear();
 		EmployeeStartDateInput.Value = DateTime.Today;
 		EmployeeIndefiniteInput.Checked = true;
 		EmployeeEmploymentPercentageInput.Value = 100;
@@ -362,7 +362,7 @@ public partial class MainForm
 		employee.Nationality = EmployeeNationalityInput.Text.Trim();
 		employee.City = EmployeeCityInput.Text.Trim();
 		employee.Address = EmployeeAddressInput.Text.Trim();
-		employee.Plz = EmployeePostalCodeInput.Text.Trim();
+		employee.Plz = EmployeePlzInput.Text.Trim();
 		employee.EmploymentStartDate = DateOnly.FromDateTime(EmployeeStartDateInput.Value);
 		employee.EmploymentEndDate = EmployeeIndefiniteInput.Checked
 			? DateOnly.MaxValue
