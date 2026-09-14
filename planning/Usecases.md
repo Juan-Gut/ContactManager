@@ -109,10 +109,10 @@ Legende: **Vorbedingung** = Zustand vor dem Test · **Schritte** = was wir in de
 - [ ] Sonderzeichen/Umlaute in Namen (ä, ö, ü, é) → werden korrekt gespeichert und wieder angezeigt (auch nach Neustart).
 - [ ] Datumsfeld mit offensichtlich unsinnigem Wert (falls frei eingebbar) → wird abgefangen, kein Absturz.
 
-## 11. Optionale Anforderungen (CSV-Import/Export, Login, Dashboard, Mutationshistorie)
+## 11. Optionale Anforderungen (Kontaktimport, Login, Dashboard, Mutationshistorie)
 
 - [ ] CSV-Import: Beispieldatei liegt bei, Import mit gültiger Datei getestet, Import mit fehlerhafter/beschädigter Datei getestet (keine Abstürze, klare Fehlermeldung).
-- [ ] CSV-Export: Export einer bestehenden Kontaktliste getestet, exportierte Datei lässt sich anschliessend wieder erfolgreich importieren.
+- [ ] Duplikatwarnung beim Import: gleiche E-Mail-Adresse bzw. AHV-Nummer gegen vorhandene Kontakte und innerhalb derselben Datei getestet; Kandidat ist standardmässig abgewählt und kann bewusst wieder ausgewählt werden.
 - [ ] Login: gültige Zugangsdaten getestet, ungültige Zugangsdaten getestet (klare Fehlermeldung, kein Zugriff), Zugangsdaten für die Abgabe-Textdatei notiert.
 - [ ] Dashboard: Zahlen/Übersicht auf dem Dashboard stimmen mit den tatsächlich gespeicherten Daten überein.
 - [ ] Mutationshistorie: eine Änderung durchführen, prüfen ob sie korrekt protokolliert und einsehbar ist.

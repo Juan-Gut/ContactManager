@@ -60,7 +60,7 @@ Kunde und Mitarbeiter erben von Person. Lernender erbt von Mitarbeiter und Perso
 | Mutationshistorie von Kontaktdaten | append in Log Datei & anzeigen lassen? |
 | Login | ein paar Accounts im JSON? |
 | Sinnvolles Dashboard-View | |
-| Import von Kontakten im CSV oder VCard-Format | Beispiel-Daten/Dateien beilegen |
+| Import von Kontakten im CSV oder VCard-Format | ✓ CSV und vCard 3.0/4.0; Vorschau, Fehlerbehandlung und Beispiel-Dateien unter `test-data/import` |
 
 ### Nicht-Funktional
 
