@@ -17,7 +17,7 @@ public partial class MainForm
 		suppressCustomerSelectionReset |= preserveCurrentView;
 		try
 		{
-			CustomersGrid.DataSource = personManager!.GetAll()
+			CustomersGrid.DataSource = personManager!.Search(CustomerSearchInput.Text)
 				.OfType<Customer>()
 				.Select(CreateCustomerListRow)
 				.ToList();
@@ -50,7 +50,7 @@ public partial class MainForm
 	/// <param name="selectedEmployeeId">The employee to select after reloading, if any.</param>
 	private void ReloadEmployees(Guid? selectedEmployeeId = null)
 	{
-		EmployeesGrid.DataSource = personManager!.GetAll()
+		EmployeesGrid.DataSource = personManager!.Search(EmployeeSearchInput.Text)
 			.OfType<Employee>()
 			.OrderBy(employee => employee.EmployeeNumber)
 			.Select(CreateEmployeeListRow)
@@ -138,14 +138,52 @@ public partial class MainForm
 			TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 	}
 
-	/// <summary>Retains the search input as a UI-only preview until customer data is connected.</summary>
+	/// <summary>Filters the customer list by the current search text.</summary>
+	/// <param name="sender">The search input raising the event.</param>
+	/// <param name="e">The event data.</param>
 	private void SearchCustomers(object? sender, EventArgs e)
 	{
+		if (personManager is null || customerEditMode)
+		{
+			return;
+		}
+
+		try
+		{
+			Guid? selectedCustomerId = CustomersGrid.SelectedRows.Count == 1
+				&& CustomersGrid.SelectedRows[0].DataBoundItem is CustomerListRow selectedRow
+				? selectedRow.Id
+				: null;
+			ReloadCustomers(selectedCustomerId);
+		}
+		catch (Exception exception)
+		{
+			ShowErrorMessage("The customer list could not be filtered.\n\n" + exception.Message);
+		}
 	}
 
-	/// <summary>Retains the search input as a UI-only preview until employee data is connected.</summary>
+	/// <summary>Filters the employee list by the current search text.</summary>
+	/// <param name="sender">The search input raising the event.</param>
+	/// <param name="e">The event data.</param>
 	private void SearchEmployees(object? sender, EventArgs e)
 	{
+		if (personManager is null || employeeEditMode)
+		{
+			return;
+		}
+
+		try
+		{
+			Guid? selectedEmployeeId = EmployeesGrid.SelectedRows.Count == 1
+				&& EmployeesGrid.SelectedRows[0].DataBoundItem is EmployeeListRow selectedRow
+				? selectedRow.Id
+				: null;
+			ReloadEmployees(selectedEmployeeId);
+		}
+		catch (Exception exception)
+		{
+			ShowErrorMessage("The employee list could not be filtered.\n\n" + exception.Message);
+		}
 	}
 
 	/// <summary>Updates customer action availability when a row is selected.</summary>

@@ -397,8 +397,9 @@ public sealed class PersonManager
 		yield return person.BusinessNumber;
 		yield return person.MobileNumber;
 		yield return person.EmailAddress;
-		yield return person.DateOfBirth.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-		yield return person.CreatedAt.ToString("O", CultureInfo.InvariantCulture);
+		yield return person.DateOfBirth.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+		yield return person.DateOfBirth.ToString("d.M.yyyy", CultureInfo.InvariantCulture);
+		yield return person.CreatedAt.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
 		yield return person.Title.ToString();
 		yield return person.Gender.ToString();
 		yield return person.IsActive ? "active" : "passive";
@@ -421,8 +422,14 @@ public sealed class PersonManager
 			yield return employee.City;
 			yield return employee.Address;
 			yield return employee.Plz;
-			yield return employee.EmploymentStartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-			yield return employee.EmploymentEndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+			yield return employee.EmploymentStartDate.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+			yield return employee.EmploymentStartDate.ToString("d.M.yyyy", CultureInfo.InvariantCulture);
+			yield return employee.EmploymentEndDate == DateOnly.MaxValue
+				? null
+				: employee.EmploymentEndDate.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+			yield return employee.EmploymentEndDate == DateOnly.MaxValue
+				? null
+				: employee.EmploymentEndDate.ToString("d.M.yyyy", CultureInfo.InvariantCulture);
 			yield return employee.EmploymentPercentage.ToString(CultureInfo.InvariantCulture);
 			yield return employee.OfficeLocation.ToString();
 			yield return employee.ManagementLevel.ToString();
