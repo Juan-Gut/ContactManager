@@ -33,10 +33,18 @@ public sealed class ValidationService
 		{
 			errors.Add("The first name is required.");
 		}
+		else if (!IsValidName(person.FirstName))
+		{
+			errors.Add("The first name may contain only letters, spaces, and hyphens.");
+		}
 
 		if (string.IsNullOrWhiteSpace(person.LastName))
 		{
 			errors.Add("The last name is required.");
+		}
+		else if (!IsValidName(person.LastName))
+		{
+			errors.Add("The last name may contain only letters, spaces, and hyphens.");
 		}
 
 		if (person.DateOfBirth == default)
@@ -89,6 +97,17 @@ public sealed class ValidationService
 		}
 
 		return errors.AsReadOnly();
+	}
+
+	/// <summary>
+	/// Determines whether a name contains only letters, whitespace, and hyphens.
+	/// </summary>
+	/// <param name="name">The name to validate.</param>
+	/// <returns><see langword="true"/> when the name uses supported characters; otherwise, <see langword="false"/>.</returns>
+	private static bool IsValidName(string name)
+	{
+		return name.Any(character => char.IsLetter(character))
+			&& name.All(character => char.IsLetter(character) || char.IsWhiteSpace(character) || character == '-');
 	}
 
 	/// <summary>
