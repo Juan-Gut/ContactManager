@@ -76,6 +76,8 @@ public partial class MainForm
 	/// <summary>Centers split views after the form has its final initial size.</summary>
 	private void InitializeLayout(object? sender, EventArgs e)
 	{
+		CustomersSplitView.Panel2MinSize = 600;
+		EmployeesSplitView.Panel2MinSize = 600;
 		CenterSplitView(CustomersSplitView);
 		CenterSplitView(EmployeesSplitView);
 		CenterCustomerNotesSplitView();
@@ -98,7 +100,9 @@ public partial class MainForm
 	/// <summary>Centers a vertical split handle after the split view has its final runtime size.</summary>
 	private static void CenterSplitView(SplitContainer splitView)
 	{
-		splitView.SplitterDistance = (splitView.ClientSize.Width - splitView.SplitterWidth) * 2 / 3;
+		int preferredDistance = (splitView.ClientSize.Width - splitView.SplitterWidth) * 2 / 3;
+		int maximumDistance = splitView.ClientSize.Width - splitView.SplitterWidth - splitView.Panel2MinSize;
+		splitView.SplitterDistance = Math.Clamp(preferredDistance, splitView.Panel1MinSize, maximumDistance);
 	}
 
 	/// <summary>Centers the customer note list and note viewer at an even width.</summary>
