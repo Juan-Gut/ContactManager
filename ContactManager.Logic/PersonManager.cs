@@ -312,7 +312,9 @@ public sealed class PersonManager
 	}
 
 	/// <summary>
-	/// Searches the last name, first name and date of birth of all contact types.
+	/// Searches all user-visible contact fields of all contact types.
+	/// Shared fields are searched for every person, while customer- and employee-specific
+	/// fields are searched only on the applicable contact type.
 	/// </summary>
 	/// <param name="searchText">The case-insensitive text to find.</param>
 	/// <returns>A read-only snapshot of matching people.</returns>
@@ -384,7 +386,7 @@ public sealed class PersonManager
 	}
 
 	/// <summary>
-	/// Enumerates the searchable values of a person: last name, first name and date of birth.
+	/// Enumerates the searchable values of a person, including fields specific to the person's type.
 	/// </summary>
 	/// <param name="person">The person whose values should be searched.</param>
 	/// <returns>The searchable values associated with the person.</returns>
@@ -396,6 +398,27 @@ public sealed class PersonManager
 		yield return $"{person.LastName} {person.FirstName}";
 		yield return person.DateOfBirth.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
 		yield return person.DateOfBirth.ToString("d.M.yyyy", CultureInfo.InvariantCulture);
+		yield return person.JobTitle;
+		yield return person.EmailAddress;
+		yield return person.BusinessNumber;
+		yield return person.MobileNumber;
+		yield return person.IsActive ? "Active" : "Passive";
+		yield return person.IsActive ? "true" : "false";
+
+		if (person is Customer customer)
+		{
+			yield return customer.Company;
+		}
+
+		if (person is Employee employee)
+		{
+			yield return employee.EmployeeNumber.ToString(CultureInfo.InvariantCulture);
+			yield return employee.Department;
+			yield return employee.AhvNumber;
+			yield return employee.Address;
+			yield return employee.City;
+			yield return employee.Plz;
+		}
 	}
 
 	/// <summary>
