@@ -244,11 +244,6 @@ public partial class MainForm
 	/// <summary>Shows or hides apprentice inputs and their corresponding labels.</summary>
 	private void SetApprenticeFieldsVisible(bool visible)
 	{
-		if (visible)
-		{
-			CurrentApprenticeshipYearInput.Maximum =
-				Math.Max(ApprenticeshipDurationInput.Minimum, ApprenticeshipDurationInput.Value);
-		}
 
 		ApprenticeshipDurationInput.Visible = visible;
 		CurrentApprenticeshipYearInput.Visible = visible;
