@@ -312,7 +312,9 @@ public sealed class PersonManager
 	}
 
 	/// <summary>
-	/// Searches useful fields across all contact types.
+	/// Searches all user-visible contact fields of all contact types.
+	/// Shared fields are searched for every person, while customer- and employee-specific
+	/// fields are searched only on the applicable contact type.
 	/// </summary>
 	/// <param name="searchText">The case-insensitive text to find.</param>
 	/// <returns>A read-only snapshot of matching people.</returns>
@@ -384,32 +386,27 @@ public sealed class PersonManager
 	}
 
 	/// <summary>
-	/// Enumerates searchable values for a person.
+	/// Enumerates the searchable values of a person, including fields specific to the person's type.
 	/// </summary>
 	/// <param name="person">The person whose values should be searched.</param>
 	/// <returns>The searchable values associated with the person.</returns>
 	private static IEnumerable<string?> GetSearchValues(Person person)
 	{
-		yield return person.FirstName;
 		yield return person.LastName;
+		yield return person.FirstName;
 		yield return $"{person.FirstName} {person.LastName}";
+		yield return $"{person.LastName} {person.FirstName}";
+		yield return person.DateOfBirth.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+		yield return person.DateOfBirth.ToString("d.M.yyyy", CultureInfo.InvariantCulture);
 		yield return person.JobTitle;
+		yield return person.EmailAddress;
 		yield return person.BusinessNumber;
 		yield return person.MobileNumber;
-		yield return person.EmailAddress;
-		yield return person.DateOfBirth.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-		yield return person.CreatedAt.ToString("O", CultureInfo.InvariantCulture);
-		yield return person.Title.ToString();
-		yield return person.Gender.ToString();
-		yield return person.IsActive ? "active" : "passive";
+		yield return person.IsActive ? "Active" : "Passive";
 
-		if (person is Customer customerWithHistory)
+		if (person is Customer customer)
 		{
-			yield return customerWithHistory.Company;
-			foreach (CustomerContactEntry entry in customerWithHistory.ContactHistory ?? [])
-			{
-				yield return entry.Note;
-			}
+			yield return customer.Company;
 		}
 
 		if (person is Employee employee)
@@ -417,21 +414,9 @@ public sealed class PersonManager
 			yield return employee.EmployeeNumber.ToString(CultureInfo.InvariantCulture);
 			yield return employee.Department;
 			yield return employee.AhvNumber;
-			yield return employee.Nationality;
-			yield return employee.City;
 			yield return employee.Address;
+			yield return employee.City;
 			yield return employee.Plz;
-			yield return employee.EmploymentStartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-			yield return employee.EmploymentEndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-			yield return employee.EmploymentPercentage.ToString(CultureInfo.InvariantCulture);
-			yield return employee.OfficeLocation.ToString();
-			yield return employee.ManagementLevel.ToString();
-		}
-
-		if (person is Apprentice apprentice)
-		{
-			yield return apprentice.ApprenticeshipDuration.ToString(CultureInfo.InvariantCulture);
-			yield return apprentice.CurrentApprenticeshipYear.ToString(CultureInfo.InvariantCulture);
 		}
 	}
 
