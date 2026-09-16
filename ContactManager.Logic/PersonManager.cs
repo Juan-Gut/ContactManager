@@ -403,7 +403,6 @@ public sealed class PersonManager
 		yield return person.BusinessNumber;
 		yield return person.MobileNumber;
 		yield return person.IsActive ? "Active" : "Passive";
-		yield return person.IsActive ? "true" : "false";
 
 		if (person is Customer customer)
 		{
