@@ -105,10 +105,10 @@ Dies haben wir mit Jean-Pierre besprochen und er hat uns bestätigt, dass dies i
 
 #### **Anmerkungen:**
 
-- Mutationshistorie: Wir haben uns entschieden, die Mutationshistorie auf die Aktion zu beschränken (z. B. `Customer
+- **Mutationshistorie**: Wir haben uns entschieden, die Mutationshistorie auf die Aktion zu beschränken (z. B. `Customer
   created`), anstatt die einzelnen Feldwerte vorher/nachher zu protokollieren. Das wäre für uns zu verbose.
-- Dashboard: Da haben wir uns entschieden, wichtige Metrics und hilfreiche Kontaktinformationen anzuzeigen.
-- Import: Beispieldaten gibt es unter `test-data/import`. Zusätzlich gibt es dort eine README-Datei mit mehr
+- **Dashboard**: Da haben wir uns entschieden, wichtige Metrics und hilfreiche Kontaktinformationen anzuzeigen.
+- **Import**: Beispieldaten gibt es unter `test-data/import`. Zusätzlich gibt es dort eine README-Datei mit mehr
   Informationen.
 
 ---
