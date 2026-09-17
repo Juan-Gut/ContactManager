@@ -1,22 +1,19 @@
-using System.Globalization;
 using ContactManager.Data;
 using ContactManager.Models;
 
 namespace ContactManager.Logic;
 
 /// <summary>
-/// Manages contacts and persists every successful mutation.
+/// Coordinates contact queries and mutations while preserving the application's public use-case API.
 /// </summary>
 public sealed class PersonManager
 {
-	/// <summary>Stores the loaded customers, employees, and apprentices.</summary>
+	private readonly ContactBatchImportService _batchImportService;
 	private readonly ContactData _data;
-	/// <summary>Assigns employee numbers when employees are added.</summary>
-	private readonly EmployeeNrGenerator _employeeNrGenerator;
-	/// <summary>Persists contact data.</summary>
-	private readonly IContactRepository _repository;
-	/// <summary>Validates people and customer contact notes.</summary>
-	private readonly ValidationService _validationService;
+	private readonly EmployeeNrGenerator _employeeNumberGenerator;
+	private readonly ContactMutationHistoryService _mutationHistoryService;
+	private readonly ContactMutationService _mutationService;
+	private readonly ContactSearchService _searchService;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="PersonManager"/> class and loads all contact data.
@@ -38,16 +35,32 @@ public sealed class PersonManager
 		ValidationService validationService,
 		EmployeeNrGenerator employeeNrGenerator)
 	{
-		_repository = repository ?? throw new ArgumentNullException(nameof(repository));
-		_validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
-		_employeeNrGenerator = employeeNrGenerator ?? throw new ArgumentNullException(nameof(employeeNrGenerator));
-		_data = _repository.Load()
-		        ?? throw new InvalidOperationException("The contact repository returned no contact data.");
+		ArgumentNullException.ThrowIfNull(repository);
+		ArgumentNullException.ThrowIfNull(validationService);
+		ArgumentNullException.ThrowIfNull(employeeNrGenerator);
 
+		_data = repository.Load()
+		       ?? throw new InvalidOperationException("The contact repository returned no contact data.");
 		_data.Customers ??= [];
 		_data.Employees ??= [];
 		_data.Apprentices ??= [];
 		_data.MutationHistory ??= [];
+
+		_employeeNumberGenerator = employeeNrGenerator;
+		_mutationHistoryService = new ContactMutationHistoryService();
+		_searchService = new ContactSearchService();
+		_mutationService = new ContactMutationService(
+			_data,
+			repository,
+			validationService,
+			employeeNrGenerator,
+			_mutationHistoryService);
+		_batchImportService = new ContactBatchImportService(
+			_data,
+			repository,
+			validationService,
+			employeeNrGenerator,
+			_mutationHistoryService);
 	}
 
 	/// <summary>
@@ -56,12 +69,7 @@ public sealed class PersonManager
 	/// <returns>A read-only snapshot of all people.</returns>
 	public IReadOnlyList<Person> GetAll()
 	{
-		return _data.Customers
-			.Cast<Person>()
-			.Concat(_data.Employees)
-			.Concat(_data.Apprentices)
-			.ToList()
-			.AsReadOnly();
+		return ContactDataQuery.CreatePeopleSnapshot(_data);
 	}
 
 	/// <summary>
@@ -71,19 +79,17 @@ public sealed class PersonManager
 	/// <returns>The matching person, or <see langword="null"/> when no person exists.</returns>
 	public Person? GetById(Guid id)
 	{
-		return GetAll().FirstOrDefault(person => person.Id == id);
+		return ContactDataQuery.FindById(_data, id);
 	}
 
 	/// <summary>
 	/// Gets the next employee number that will be assigned to a new employee.
 	/// </summary>
 	/// <returns>The next available employee number.</returns>
-	/// <exception cref="InvalidOperationException">
-	/// Thrown when no further employee number can be assigned.
-	/// </exception>
+	/// <exception cref="InvalidOperationException">Thrown when no further employee number can be assigned.</exception>
 	public int GetNextEmployeeNumber()
 	{
-		return _employeeNrGenerator.GetNextAvailable(_data);
+		return _employeeNumberGenerator.GetNextAvailable(_data);
 	}
 
 	/// <summary>
@@ -93,11 +99,7 @@ public sealed class PersonManager
 	/// <returns>A read-only snapshot ordered from newest to oldest.</returns>
 	public IReadOnlyList<MutationLogEntry> GetMutationHistory(Guid contactId)
 	{
-		return _data.MutationHistory
-			.Where(entry => entry.ContactId == contactId)
-			.OrderByDescending(entry => entry.ChangedAt)
-			.ToList()
-			.AsReadOnly();
+		return _mutationHistoryService.GetForContact(_data, contactId);
 	}
 
 	/// <summary>
@@ -108,31 +110,7 @@ public sealed class PersonManager
 	/// <exception cref="InvalidOperationException">Thrown when the identifier is already in use.</exception>
 	public void Add(Person person)
 	{
-		ArgumentNullException.ThrowIfNull(person);
-		EnsureValid(person);
-
-		if (GetById(person.Id) is not null)
-		{
-			throw new InvalidOperationException($"A person with identifier '{person.Id}' already exists.");
-		}
-
-
-		switch (person)
-		{
-			case Apprentice apprentice:
-				AddEmployee(apprentice, _data.Apprentices);
-				break;
-			case Employee employee:
-				AddEmployee(employee, _data.Employees);
-				break;
-			case Customer customer:
-				AddAndSave(_data.Customers, customer);
-				break;
-			default:
-				throw new ArgumentException(
-					$"The person type '{person.GetType().Name}' is not supported.",
-					nameof(person));
-		}
+		_mutationService.Add(person);
 	}
 
 	/// <summary>
@@ -148,78 +126,7 @@ public sealed class PersonManager
 	/// <exception cref="InvalidOperationException">Thrown when an identifier is duplicated.</exception>
 	public int Import(IEnumerable<Person> people)
 	{
-		ArgumentNullException.ThrowIfNull(people);
-		List<Person> contacts = people.ToList();
-		if (contacts.Count == 0)
-		{
-			return 0;
-		}
-
-		HashSet<Guid> identifiers = GetAll().Select(person => person.Id).ToHashSet();
-		foreach (Person contact in contacts)
-		{
-			EnsureValid(contact);
-			if (!identifiers.Add(contact.Id))
-			{
-				throw new InvalidOperationException(
-					$"A person with identifier '{contact.Id}' occurs more than once or already exists.");
-			}
-
-			if (contact is not Customer and not Employee)
-			{
-				throw new ArgumentException(
-					$"The person type '{contact.GetType().Name}' is not supported.",
-					nameof(people));
-			}
-		}
-
-		int previousCustomerCount = _data.Customers.Count;
-		int previousEmployeeCount = _data.Employees.Count;
-		int previousApprenticeCount = _data.Apprentices.Count;
-		int previousMutationCount = _data.MutationHistory.Count;
-		int previousNextEmployeeNumber = _data.NextEmployeeNumber;
-		Dictionary<Employee, int> previousEmployeeNumbers = contacts
-			.OfType<Employee>()
-			.ToDictionary(employee => employee, employee => employee.EmployeeNumber);
-
-		try
-		{
-			foreach (Person contact in contacts)
-			{
-				switch (contact)
-				{
-					case Apprentice apprentice:
-						_employeeNrGenerator.AssignNext(apprentice, _data);
-						_data.Apprentices.Add(apprentice);
-						break;
-					case Employee employee:
-						_employeeNrGenerator.AssignNext(employee, _data);
-						_data.Employees.Add(employee);
-						break;
-					case Customer customer:
-						_data.Customers.Add(customer);
-						break;
-				}
-
-				AddMutationLog(contact, "Imported from contact file");
-			}
-
-			_repository.Save(_data);
-			return contacts.Count;
-		}
-		catch
-		{
-			_data.Customers.RemoveRange(previousCustomerCount, _data.Customers.Count - previousCustomerCount);
-			_data.Employees.RemoveRange(previousEmployeeCount, _data.Employees.Count - previousEmployeeCount);
-			_data.Apprentices.RemoveRange(previousApprenticeCount, _data.Apprentices.Count - previousApprenticeCount);
-			_data.MutationHistory.RemoveRange(previousMutationCount, _data.MutationHistory.Count - previousMutationCount);
-			_data.NextEmployeeNumber = previousNextEmployeeNumber;
-			foreach ((Employee employee, int employeeNumber) in previousEmployeeNumbers)
-			{
-				employee.EmployeeNumber = employeeNumber;
-			}
-			throw;
-		}
+		return _batchImportService.Import(people);
 	}
 
 	/// <summary>
@@ -230,35 +137,7 @@ public sealed class PersonManager
 	/// <exception cref="ArgumentException">Thrown when the person is invalid or its type changed.</exception>
 	public bool Update(Person person)
 	{
-		ArgumentNullException.ThrowIfNull(person);
-
-		Person? existingPerson = GetById(person.Id);
-		if (existingPerson is null)
-		{
-			return false;
-		}
-
-		if (existingPerson.GetType() != person.GetType())
-		{
-			throw new ArgumentException("An existing person's contact type cannot be changed.", nameof(person));
-		}
-
-		if (person is Employee updatedEmployee && existingPerson is Employee existingEmployee)
-		{
-			updatedEmployee.EmployeeNumber = existingEmployee.EmployeeNumber;
-		}
-
-		EnsureValid(person);
-
-		return person switch
-		{
-			Apprentice apprentice => ReplaceAndSave(_data.Apprentices, apprentice),
-			Employee employee => ReplaceAndSave(_data.Employees, employee),
-			Customer customer => ReplaceAndSave(_data.Customers, customer),
-			_ => throw new ArgumentException(
-				$"The person type '{person.GetType().Name}' is not supported.",
-				nameof(person))
-		};
+		return _mutationService.Update(person);
 	}
 
 	/// <summary>
@@ -268,9 +147,7 @@ public sealed class PersonManager
 	/// <returns><see langword="true"/> when the person was deleted; otherwise, <see langword="false"/>.</returns>
 	public bool Delete(Guid id)
 	{
-		return RemoveAndSave(_data.Customers, id)
-		       || RemoveAndSave(_data.Employees, id)
-		       || RemoveAndSave(_data.Apprentices, id);
+		return _mutationService.Delete(id);
 	}
 
 	/// <summary>
@@ -281,34 +158,7 @@ public sealed class PersonManager
 	/// <returns><see langword="true"/> when the person exists; otherwise, <see langword="false"/>.</returns>
 	public bool SetActive(Guid id, bool isActive)
 	{
-		Person? person = GetById(id);
-		if (person is null)
-		{
-			return false;
-		}
-
-		if (person.IsActive == isActive)
-		{
-			return true;
-		}
-
-		bool previousValue = person.IsActive;
-		person.IsActive = isActive;
-		MutationLogEntry mutation = AddMutationLog(
-			person,
-			isActive ? "Activated" : "Deactivated");
-
-		try
-		{
-			_repository.Save(_data);
-			return true;
-		}
-		catch
-		{
-			person.IsActive = previousValue;
-			_data.MutationHistory.Remove(mutation);
-			throw;
-		}
+		return _mutationService.SetActive(id, isActive);
 	}
 
 	/// <summary>
@@ -320,16 +170,7 @@ public sealed class PersonManager
 	/// <returns>A read-only snapshot of matching people.</returns>
 	public IReadOnlyList<Person> Search(string? searchText)
 	{
-		if (string.IsNullOrWhiteSpace(searchText))
-		{
-			return GetAll();
-		}
-
-		string normalizedSearchText = searchText.Trim();
-		return GetAll()
-			.Where(person => GetSearchValues(person).Any(value => Contains(value, normalizedSearchText)))
-			.ToList()
-			.AsReadOnly();
+		return _searchService.Search(GetAll(), searchText);
 	}
 
 	/// <summary>
@@ -341,319 +182,6 @@ public sealed class PersonManager
 	/// <exception cref="ArgumentException">Thrown when the note is invalid.</exception>
 	public bool AddCustomerContact(Guid customerId, string note)
 	{
-		IReadOnlyList<string> errors = _validationService.ValidateContactNote(note);
-		if (errors.Count > 0)
-		{
-			throw new ArgumentException(string.Join(Environment.NewLine, errors), nameof(note));
-		}
-
-		Customer? customer = _data.Customers.FirstOrDefault(storedCustomer => storedCustomer.Id == customerId);
-		if (customer is null)
-		{
-			return false;
-		}
-
-		customer.ContactHistory ??= [];
-		CustomerContactEntry entry = new()
-		{
-			Note = note.Trim()
-		};
-		customer.ContactHistory.Add(entry);
-		MutationLogEntry mutation = AddMutationLog(customer, "Customer contact note added");
-
-		try
-		{
-			_repository.Save(_data);
-			return true;
-		}
-		catch
-		{
-			customer.ContactHistory.Remove(entry);
-			_data.MutationHistory.Remove(mutation);
-			throw;
-		}
-	}
-
-	/// <summary>
-	/// Determines whether a value contains search text without regard to case.
-	/// </summary>
-	/// <param name="value">The value to search.</param>
-	/// <param name="searchText">The text to find.</param>
-	/// <returns><see langword="true"/> when the value contains the search text; otherwise, <see langword="false"/>.</returns>
-	private static bool Contains(string? value, string searchText)
-	{
-		return value?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true;
-	}
-
-	/// <summary>
-	/// Enumerates the searchable values of a person, including fields specific to the person's type.
-	/// </summary>
-	/// <param name="person">The person whose values should be searched.</param>
-	/// <returns>The searchable values associated with the person.</returns>
-	private static IEnumerable<string?> GetSearchValues(Person person)
-	{
-		yield return person.LastName;
-		yield return person.FirstName;
-		yield return $"{person.FirstName} {person.LastName}";
-		yield return $"{person.LastName} {person.FirstName}";
-		yield return person.DateOfBirth.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
-		yield return person.DateOfBirth.ToString("d.M.yyyy", CultureInfo.InvariantCulture);
-		yield return person.JobTitle;
-		yield return person.EmailAddress;
-		yield return person.BusinessNumber;
-		yield return person.MobileNumber;
-		yield return person.IsActive ? "Active" : "Passive";
-
-		if (person is Customer customer)
-		{
-			yield return customer.Company;
-		}
-
-		if (person is Employee employee)
-		{
-			yield return employee.EmployeeNumber.ToString(CultureInfo.InvariantCulture);
-			yield return employee.Department;
-			yield return employee.AhvNumber;
-			yield return employee.Address;
-			yield return employee.City;
-			yield return employee.Plz;
-		}
-	}
-
-	/// <summary>
-	/// Assigns an employee number, adds an employee, and persists the change.
-	/// </summary>
-	/// <typeparam name="TEmployee">The employee type being added.</typeparam>
-	/// <param name="employee">The employee to add.</param>
-	/// <param name="collection">The collection receiving the employee.</param>
-	private void AddEmployee<TEmployee>(TEmployee employee, List<TEmployee> collection)
-		where TEmployee : Employee
-	{
-		int previousEmployeeNumber = employee.EmployeeNumber;
-		int previousNextEmployeeNumber = _data.NextEmployeeNumber;
-		_employeeNrGenerator.AssignNext(employee, _data);
-
-		try
-		{
-			collection.Add(employee);
-			AddMutationLog(employee, "Created");
-			_repository.Save(_data);
-		}
-		catch
-		{
-			RemoveLatestMutation(employee.Id);
-			collection.Remove(employee);
-			employee.EmployeeNumber = previousEmployeeNumber;
-			_data.NextEmployeeNumber = previousNextEmployeeNumber;
-			throw;
-		}
-	}
-
-	/// <summary>
-	/// Adds a person to a collection and persists the change.
-	/// </summary>
-	/// <typeparam name="TPerson">The person type being added.</typeparam>
-	/// <param name="collection">The collection receiving the person.</param>
-	/// <param name="person">The person to add.</param>
-	private void AddAndSave<TPerson>(List<TPerson> collection, TPerson person)
-		where TPerson : Person
-	{
-		collection.Add(person);
-		MutationLogEntry mutation = AddMutationLog(person, "Created");
-
-		try
-		{
-			_repository.Save(_data);
-		}
-		catch
-		{
-			_data.MutationHistory.Remove(mutation);
-			collection.Remove(person);
-			throw;
-		}
-	}
-
-	/// <summary>
-	/// Validates a person and throws when validation errors exist.
-	/// </summary>
-	/// <param name="person">The person to validate.</param>
-	private void EnsureValid(Person person)
-	{
-		IReadOnlyList<string> errors = _validationService.Validate(person);
-		if (errors.Count > 0)
-		{
-			throw new ArgumentException(string.Join(Environment.NewLine, errors));
-		}
-	}
-
-	/// <summary>
-	/// Removes a person from a collection and persists the change.
-	/// </summary>
-	/// <typeparam name="TPerson">The person type stored in the collection.</typeparam>
-	/// <param name="collection">The collection from which to remove the person.</param>
-	/// <param name="id">The identifier of the person to remove.</param>
-	/// <returns><see langword="true"/> when a person was removed; otherwise, <see langword="false"/>.</returns>
-	private bool RemoveAndSave<TPerson>(List<TPerson> collection, Guid id)
-		where TPerson : Person
-	{
-		int index = collection.FindIndex(person => person.Id == id);
-		if (index < 0)
-		{
-			return false;
-		}
-
-		TPerson person = collection[index];
-		List<MutationLogEntry> previousMutationHistory = [.. _data.MutationHistory];
-		collection.RemoveAt(index);
-		_data.MutationHistory.RemoveAll(entry => entry.ContactId == person.Id);
-
-		try
-		{
-			_repository.Save(_data);
-			return true;
-		}
-		catch
-		{
-			collection.Insert(index, person);
-			_data.MutationHistory = previousMutationHistory;
-			throw;
-		}
-	}
-
-	/// <summary>
-	/// Replaces a person in a collection and persists the change.
-	/// </summary>
-	/// <typeparam name="TPerson">The person type stored in the collection.</typeparam>
-	/// <param name="collection">The collection containing the person.</param>
-	/// <param name="person">The replacement person.</param>
-	/// <returns><see langword="true"/> when a person was replaced; otherwise, <see langword="false"/>.</returns>
-	private bool ReplaceAndSave<TPerson>(List<TPerson> collection, TPerson person)
-		where TPerson : Person
-	{
-		int index = collection.FindIndex(storedPerson => storedPerson.Id == person.Id);
-		if (index < 0)
-		{
-			return false;
-		}
-
-		TPerson previousPerson = collection[index];
-		collection[index] = person;
-		MutationLogEntry mutation = AddMutationLog(person, CreateUpdateAction(previousPerson, person));
-
-		try
-		{
-			_repository.Save(_data);
-			return true;
-		}
-		catch
-		{
-			_data.MutationHistory.Remove(mutation);
-			collection[index] = previousPerson;
-			throw;
-		}
-	}
-
-	/// <summary>
-	/// Creates a descriptive update action from changed field names without including field values.
-	/// </summary>
-	/// <param name="previousPerson">The person before the update.</param>
-	/// <param name="updatedPerson">The person after the update.</param>
-	/// <returns>An action description containing the affected field names only.</returns>
-	private static string CreateUpdateAction(Person previousPerson, Person updatedPerson)
-	{
-		List<string> changedFields = [];
-		if (previousPerson.Title != updatedPerson.Title) { changedFields.Add("Title"); }
-		if (previousPerson.FirstName != updatedPerson.FirstName) { changedFields.Add("First name"); }
-		if (previousPerson.LastName != updatedPerson.LastName) { changedFields.Add("Last name"); }
-		if (previousPerson.DateOfBirth != updatedPerson.DateOfBirth) { changedFields.Add("Date of birth"); }
-		if (previousPerson.Gender != updatedPerson.Gender) { changedFields.Add("Gender"); }
-		if (previousPerson.JobTitle != updatedPerson.JobTitle) { changedFields.Add("Job title"); }
-		if (previousPerson.BusinessNumber != updatedPerson.BusinessNumber) { changedFields.Add("Business phone"); }
-		if (previousPerson.MobileNumber != updatedPerson.MobileNumber) { changedFields.Add("Mobile phone"); }
-		if (previousPerson.EmailAddress != updatedPerson.EmailAddress) { changedFields.Add("Email address"); }
-		if (previousPerson.IsActive != updatedPerson.IsActive) { changedFields.Add("Active status"); }
-
-		if (previousPerson is Customer previousCustomer && updatedPerson is Customer updatedCustomer)
-		{
-			if (previousCustomer.Company != updatedCustomer.Company) { changedFields.Add("Company"); }
-		}
-
-		if (previousPerson is Employee previousEmployee && updatedPerson is Employee updatedEmployee)
-		{
-			if (previousEmployee.Department != updatedEmployee.Department) { changedFields.Add("Department"); }
-			if (previousEmployee.AhvNumber != updatedEmployee.AhvNumber) { changedFields.Add("AHV number"); }
-			if (previousEmployee.Nationality != updatedEmployee.Nationality) { changedFields.Add("Nationality"); }
-			if (previousEmployee.City != updatedEmployee.City) { changedFields.Add("City"); }
-			if (previousEmployee.Address != updatedEmployee.Address) { changedFields.Add("Address"); }
-			if (previousEmployee.Plz != updatedEmployee.Plz) { changedFields.Add("PLZ"); }
-			if (previousEmployee.EmploymentStartDate != updatedEmployee.EmploymentStartDate)
-			{
-				changedFields.Add("Employment start date");
-			}
-			if (previousEmployee.EmploymentEndDate != updatedEmployee.EmploymentEndDate)
-			{
-				changedFields.Add("Employment end date");
-			}
-			if (previousEmployee.EmploymentPercentage != updatedEmployee.EmploymentPercentage)
-			{
-				changedFields.Add("Employment percentage");
-			}
-			if (previousEmployee.OfficeLocation != updatedEmployee.OfficeLocation)
-			{
-				changedFields.Add("Office location");
-			}
-			if (previousEmployee.ManagementLevel != updatedEmployee.ManagementLevel)
-			{
-				changedFields.Add("Management level");
-			}
-		}
-
-		if (previousPerson is Apprentice previousApprentice && updatedPerson is Apprentice updatedApprentice)
-		{
-			if (previousApprentice.ApprenticeshipDuration != updatedApprentice.ApprenticeshipDuration)
-			{
-				changedFields.Add("Apprenticeship duration");
-			}
-			if (previousApprentice.CurrentApprenticeshipYear != updatedApprentice.CurrentApprenticeshipYear)
-			{
-				changedFields.Add("Current apprenticeship year");
-			}
-		}
-
-		return changedFields.Count == 0
-			? "Updated contact information (no field values changed)"
-			: $"Updated contact information ({string.Join(", ", changedFields)})";
-	}
-
-	/// <summary>
-	/// Adds a metadata-only entry to the mutation history.
-	/// </summary>
-	/// <param name="person">The contact affected by the mutation.</param>
-	/// <param name="action">The completed action, without changed values.</param>
-	/// <returns>The entry added to the in-memory history.</returns>
-	private MutationLogEntry AddMutationLog(Person person, string action)
-	{
-		MutationLogEntry mutation = new()
-		{
-			ContactId = person.Id,
-			Action = action
-		};
-
-		_data.MutationHistory.Add(mutation);
-		return mutation;
-	}
-
-	/// <summary>
-	/// Removes the most recent mutation entry for a contact when persistence fails.
-	/// </summary>
-	/// <param name="contactId">The contact whose failed mutation should be removed.</param>
-	private void RemoveLatestMutation(Guid contactId)
-	{
-		MutationLogEntry? mutation = _data.MutationHistory
-			.LastOrDefault(entry => entry.ContactId == contactId);
-		if (mutation is not null)
-		{
-			_data.MutationHistory.Remove(mutation);
-		}
+		return _mutationService.AddCustomerContact(customerId, note);
 	}
 }
