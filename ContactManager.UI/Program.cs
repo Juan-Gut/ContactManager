@@ -30,6 +30,11 @@ internal static class Program
 
 			IContactRepository repository = new FileRepository();
 			PersonManager personManager = new(repository);
+			if (repository is FileRepository fileRepository && fileRepository.WasRecoveredFromCorruption)
+			{
+				ShowCorruptionWarning();
+			}
+
 			Application.Run(new MainForm(personManager));
 		}
 		catch (JsonException exception)
@@ -57,5 +62,19 @@ internal static class Program
 			"Contact Manager",
 			MessageBoxButtons.OK,
 			MessageBoxIcon.Error);
+	}
+
+	/// <summary>
+	/// Informs the user that the corrupt storage file was renamed and empty data was loaded.
+	/// </summary>
+	private static void ShowCorruptionWarning()
+	{
+		MessageBox.Show(
+			"The contact data file was corrupted and could not be loaded. " +
+			"The corrupt file was marked as such, and the application started with a new data file. " +
+			"Please restore the file from a backup if you need the missing contacts.",
+			"Contact data corruption",
+			MessageBoxButtons.OK,
+			MessageBoxIcon.Warning);
 	}
 }
