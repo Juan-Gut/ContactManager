@@ -52,8 +52,8 @@ partial class LoginForm
 		LoginLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
 		LoginLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
 		LoginLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
-		LoginLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-		LoginLayout.Size = new Size(430, 268);
+		LoginLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+		LoginLayout.Size = new Size(430, 280);
 		LoginLayout.TabIndex = 0;
 		//
 		// LoginTitle
@@ -120,6 +120,7 @@ partial class LoginForm
 		//
 		LoginActions.Anchor = AnchorStyles.None;
 		LoginActions.AutoSize = true;
+		LoginActions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
 		LoginLayout.SetColumnSpan(LoginActions, 2);
 		LoginActions.Controls.Add(LoginButton);
 		LoginActions.Controls.Add(CancelLoginButton);
@@ -158,7 +159,7 @@ partial class LoginForm
 		AutoScaleDimensions = new SizeF(8F, 20F);
 		AutoScaleMode = AutoScaleMode.Font;
 		CancelButton = CancelLoginButton;
-		ClientSize = new Size(430, 268);
+		ClientSize = new Size(430, 280);
 		Controls.Add(LoginLayout);
 		FormBorderStyle = FormBorderStyle.FixedDialog;
 		MaximizeBox = false;
