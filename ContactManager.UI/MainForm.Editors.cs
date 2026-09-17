@@ -219,8 +219,8 @@ public partial class MainForm
 		EmployeeOfficeLocationInput.SelectedIndex = 0;
 		EmployeeManagementLevelInput.SelectedIndex = 0;
 		EmployeeTypeEmployeeOption.Checked = true;
-		ApprenticeshipDurationInput.Value = ApprenticeshipDurationInput.Minimum;
-		CurrentApprenticeshipYearInput.Value = CurrentApprenticeshipYearInput.Minimum;
+		ApprenticeshipDurationInput.Value = 1;
+		CurrentApprenticeshipYearInput.Value = 1;
 		creatingEmployee = true;
 		SetEmployeeEditorMode(true, false);
 	}
