@@ -47,11 +47,9 @@ public sealed class FileRepository : IContactRepository
 			ContactData? deserializedData = JsonSerializer.Deserialize<ContactData>(jsonString);
 			return deserializedData ?? new ContactData();
 		}
-		catch (JsonException jsonException)
+		catch (JsonException)
 		{
 			File.Move(_filePath, $"{_filePath}.corrupt", true);
-			//TODO: Show an error message on UI -> could not load corrupt JSON
-			Console.WriteLine("Err: JSON is invalid. Unable to load data.");
 			return new ContactData();
 		}
 		catch (Exception e)
