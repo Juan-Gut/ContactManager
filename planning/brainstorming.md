@@ -38,7 +38,6 @@ such, it is not part of the final documentation.
 - English -> Ask JP if it's fine
 - journal (optional)
 - Khaled Git explanation + practice
-- GitHub Copilot
 
 ## APPLICATION:
 
