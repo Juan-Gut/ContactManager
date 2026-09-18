@@ -12,8 +12,6 @@ partial class LoginForm
 	private FlowLayoutPanel LoginActions = null!;
 	private Button LoginButton = null!;
 	private Button CancelLoginButton = null!;
-	// TO DELETE WHEN APP IS FINISHED: Development-only authentication bypass control.
-	private Button SkipLoginDevelopmentButton = null!;
 
 	#region Windows Form Designer generated code
 
@@ -29,8 +27,6 @@ partial class LoginForm
 		LoginActions = new FlowLayoutPanel();
 		LoginButton = new Button();
 		CancelLoginButton = new Button();
-		// TO DELETE WHEN APP IS FINISHED: Development-only authentication bypass control.
-		SkipLoginDevelopmentButton = new Button();
 		LoginLayout.SuspendLayout();
 		LoginActions.SuspendLayout();
 		SuspendLayout();
@@ -47,23 +43,17 @@ partial class LoginForm
 		LoginLayout.Controls.Add(PasswordInput, 1, 2);
 		LoginLayout.Controls.Add(LoginError, 0, 3);
 		LoginLayout.Controls.Add(LoginActions, 0, 4);
-		// TO DELETE WHEN APP IS FINISHED: Places the development-only bypass below the login actions.
-		LoginLayout.Controls.Add(SkipLoginDevelopmentButton, 0, 5);
-		LoginLayout.SetColumnSpan(SkipLoginDevelopmentButton, 2);
 		LoginLayout.Dock = DockStyle.Fill;
 		LoginLayout.Location = new Point(0, 0);
 		LoginLayout.Name = "LoginLayout";
 		LoginLayout.Padding = new Padding(24);
-		LoginLayout.RowCount = 6;
+		LoginLayout.RowCount = 5;
 		LoginLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54F));
 		LoginLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
 		LoginLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
 		LoginLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
-		// TO DELETE WHEN APP IS FINISHED: Keeps the login actions above the development-only bypass.
 		LoginLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
-		LoginLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-		// TO DELETE WHEN APP IS FINISHED: Accommodates the development-only bypass.
-		LoginLayout.Size = new Size(430, 310);
+		LoginLayout.Size = new Size(430, 280);
 		LoginLayout.TabIndex = 0;
 		//
 		// LoginTitle
@@ -128,8 +118,9 @@ partial class LoginForm
 		//
 		// LoginActions
 		//
-		LoginActions.Anchor = AnchorStyles.Top;
+		LoginActions.Anchor = AnchorStyles.None;
 		LoginActions.AutoSize = true;
+		LoginActions.AutoSizeMode = AutoSizeMode.GrowAndShrink;
 		LoginLayout.SetColumnSpan(LoginActions, 2);
 		LoginActions.Controls.Add(LoginButton);
 		LoginActions.Controls.Add(CancelLoginButton);
@@ -162,27 +153,13 @@ partial class LoginForm
 		CancelLoginButton.Text = "Cancel";
 		CancelLoginButton.UseVisualStyleBackColor = true;
 		//
-		// SkipLoginDevelopmentButton
-		// TO DELETE WHEN APP IS FINISHED: Development-only authentication bypass.
-		//
-		SkipLoginDevelopmentButton.Anchor = AnchorStyles.Top;
-		SkipLoginDevelopmentButton.AutoSize = true;
-		SkipLoginDevelopmentButton.Location = new Point(130, 249);
-		SkipLoginDevelopmentButton.Name = "SkipLoginDevelopmentButton";
-		SkipLoginDevelopmentButton.Size = new Size(170, 29);
-		SkipLoginDevelopmentButton.TabIndex = 7;
-		SkipLoginDevelopmentButton.Text = "Skip login (development)";
-		SkipLoginDevelopmentButton.UseVisualStyleBackColor = true;
-		SkipLoginDevelopmentButton.Click += SkipLoginForDevelopment;
-		//
 		// LoginForm
 		//
 		AcceptButton = LoginButton;
 		AutoScaleDimensions = new SizeF(8F, 20F);
 		AutoScaleMode = AutoScaleMode.Font;
 		CancelButton = CancelLoginButton;
-		// TO DELETE WHEN APP IS FINISHED: Accommodates the development-only bypass.
-		ClientSize = new Size(430, 310);
+		ClientSize = new Size(430, 280);
 		Controls.Add(LoginLayout);
 		FormBorderStyle = FormBorderStyle.FixedDialog;
 		MaximizeBox = false;

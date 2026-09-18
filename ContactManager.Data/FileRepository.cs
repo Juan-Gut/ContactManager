@@ -58,7 +58,6 @@ public sealed class FileRepository : IContactRepository
 		{
 			File.Move(_filePath, $"{_filePath}.corrupt", true);
 			WasRecoveredFromCorruption = true;
-			Console.WriteLine("Err: JSON is invalid. Unable to load data.");
 			return new ContactData();
 		}
 		catch (Exception e)
