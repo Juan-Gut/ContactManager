@@ -21,6 +21,11 @@ public sealed class FileRepository : IContactRepository
 	private static readonly string _filePath = Path.Combine(_localAppDataDir, "contacts.json");
 
 	/// <summary>
+	/// Gets a value indicating whether the last load recovered from a corrupt data file.
+	/// </summary>
+	public bool WasRecoveredFromCorruption { get; private set; }
+
+	/// <summary>
 	/// Options for the JSONSerializer.
 	/// </summary>
 	private static readonly JsonSerializerOptions _options = new()
@@ -36,6 +41,8 @@ public sealed class FileRepository : IContactRepository
 	/// </returns>
 	public ContactData Load()
 	{
+		WasRecoveredFromCorruption = false;
+
 		if (!File.Exists(_filePath))
 		{
 			return new ContactData();
@@ -50,6 +57,7 @@ public sealed class FileRepository : IContactRepository
 		catch (JsonException)
 		{
 			File.Move(_filePath, $"{_filePath}.corrupt", true);
+			WasRecoveredFromCorruption = true;
 			return new ContactData();
 		}
 		catch (Exception e)

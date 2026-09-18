@@ -198,9 +198,10 @@ public sealed class ValidationService
 		{
 							errors.Add("The PLZ is required.");
 		}
-		else if (!employee.Plz.All(character => character is >= '0' and <= '9'))
+		else if (employee.Plz.Length != 4
+		         || !employee.Plz.All(character => character is >= '0' and <= '9'))
 		{
-			errors.Add("The PLZ may contain only digits.");
+			errors.Add("The PLZ must contain exactly four digits.");
 		}
 
 		// We allow 16-year-old employees due to the apprenticeship program
